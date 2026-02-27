@@ -1,10 +1,33 @@
 import type { GatewayAdapter } from "./adapter";
 
 let adapterInstance: GatewayAdapter | null = null;
+let adapterReadyResolvers: Array<(adapter: GatewayAdapter) => void> = [];
 
 export function getAdapter(): GatewayAdapter {
   if (adapterInstance) return adapterInstance;
   throw new Error("GatewayAdapter not initialized. Call initAdapter() first.");
+}
+
+/**
+ * Wait for adapter to be initialized (resolves immediately if already ready).
+ * Console pages call this before fetching data to handle the race condition
+ * where the page mounts before the WebSocket connection establishes.
+ */
+export function waitForAdapter(timeoutMs = 15_000): Promise<GatewayAdapter> {
+  if (adapterInstance) return Promise.resolve(adapterInstance);
+
+  return new Promise<GatewayAdapter>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      adapterReadyResolvers = adapterReadyResolvers.filter((r) => r !== resolve);
+      reject(new Error("Adapter initialization timed out"));
+    }, timeoutMs);
+
+    const wrappedResolve = (adapter: GatewayAdapter) => {
+      clearTimeout(timer);
+      resolve(adapter);
+    };
+    adapterReadyResolvers.push(wrappedResolve);
+  });
 }
 
 export async function initAdapter(
@@ -32,6 +55,12 @@ export async function initAdapter(
   }
 
   await adapterInstance.connect();
+
+  for (const resolve of adapterReadyResolvers) {
+    resolve(adapterInstance);
+  }
+  adapterReadyResolvers = [];
+
   return adapterInstance;
 }
 

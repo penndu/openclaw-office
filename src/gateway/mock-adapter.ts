@@ -1,4 +1,4 @@
-import type { GatewayAdapter, AdapterEventHandler } from "./adapter";
+import type { GatewayAdapter, AdapterEventHandler, SkillUpdatePatch } from "./adapter";
 import type {
   ChannelInfo,
   ChatMessage,
@@ -14,29 +14,60 @@ import type {
 import type { AgentsListResponse } from "./types";
 
 const MOCK_CHANNELS: ChannelInfo[] = [
-  { id: "telegram-bot1", type: "telegram", name: "MyBot", status: "connected" },
-  { id: "discord-srv1", type: "discord", name: "Dev Server", status: "connected" },
-  { id: "whatsapp-wa1", type: "whatsapp", name: "WhatsApp", status: "disconnected" },
+  { id: "telegram:bot1", type: "telegram", name: "MyBot", status: "connected", accountId: "bot1", configured: true, linked: true, running: true, lastConnectedAt: Date.now() - 60_000 },
+  { id: "discord:srv1", type: "discord", name: "Dev Server", status: "connected", accountId: "srv1", configured: true, linked: true, running: true, lastConnectedAt: Date.now() - 120_000 },
+  { id: "whatsapp:wa1", type: "whatsapp", name: "WhatsApp", status: "disconnected", accountId: "wa1", configured: true, linked: false, running: false },
+  { id: "signal:sig1", type: "signal", name: "Signal", status: "error", accountId: "sig1", configured: true, linked: false, running: false, error: "Session expired" },
 ];
 
 const MOCK_SKILLS: SkillInfo[] = [
-  { id: "web-search", slug: "web-search", name: "Web Search", description: "搜索互联网获取实时信息", enabled: true, icon: "🔍", version: "1.0.0", isCore: true, isBundled: true },
-  { id: "code-interpreter", slug: "code-interpreter", name: "Code Interpreter", description: "执行代码并返回结果", enabled: true, icon: "💻", version: "1.2.0", isCore: true, isBundled: true },
-  { id: "image-gen", slug: "image-gen", name: "Image Generation", description: "生成图片", enabled: false, icon: "🎨", version: "0.9.0" },
+  { id: "web-search", slug: "web-search", name: "Web Search", description: "搜索互联网获取实时信息", enabled: true, icon: "🔍", version: "1.0.0", isCore: true, isBundled: true, source: "core", always: true, eligible: true, requirements: { bins: ["curl"] }, missing: { bins: [] }, configChecks: [{ path: "SEARCH_API_KEY", satisfied: true }], primaryEnv: "SEARCH_API_KEY" },
+  { id: "code-interpreter", slug: "code-interpreter", name: "Code Interpreter", description: "执行代码并返回结果", enabled: true, icon: "💻", version: "1.2.0", isCore: true, isBundled: true, source: "core", always: true, eligible: true },
+  { id: "file-editor", slug: "file-editor", name: "File Editor", description: "读写本地文件", enabled: true, icon: "📝", version: "1.0.0", isCore: true, isBundled: true, source: "core", always: true, eligible: true },
+  { id: "image-gen", slug: "image-gen", name: "Image Generation", description: "使用 AI 生成图片", enabled: true, icon: "🎨", version: "0.9.0", isBundled: false, source: "marketplace", eligible: true, installOptions: [{ id: "node", kind: "npm", label: "npm install" }], homepage: "https://github.com/openclaw/image-gen" },
+  { id: "playwright", slug: "playwright", name: "Playwright", description: "浏览器自动化与测试", enabled: true, icon: "🎭", version: "1.1.0", isBundled: false, source: "marketplace", eligible: true, installOptions: [{ id: "brew", kind: "brew", label: "Homebrew" }, { id: "npm", kind: "npm", label: "npm install" }], requirements: { bins: ["playwright"] }, missing: { bins: [] } },
+  { id: "voice-call", slug: "voice-call", name: "Voice Call", description: "语音通话技能", enabled: false, icon: "📞", version: "0.5.0", isBundled: false, source: "marketplace", eligible: false, blockedByAllowlist: true },
 ];
 
 const MOCK_CRON_TASKS: CronTask[] = [
   {
     id: "cron-1",
     name: "每日摘要",
-    message: "生成今日工作摘要",
-    schedule: "0 18 * * *",
-    target: { channelType: "telegram", channelId: "bot1", channelName: "MyBot" },
+    description: "每天下午6点生成工作摘要",
+    schedule: { kind: "cron", expr: "0 18 * * *" },
     enabled: true,
-    createdAt: new Date(Date.now() - 7 * 86400_000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    lastRun: { time: new Date(Date.now() - 86400_000).toISOString(), success: true },
-    nextRun: new Date(Date.now() + 3600_000).toISOString(),
+    createdAtMs: Date.now() - 7 * 86400_000,
+    updatedAtMs: Date.now() - 86400_000,
+    sessionTarget: "main",
+    wakeMode: "now",
+    payload: { kind: "agentTurn", message: "生成今日工作摘要" },
+    delivery: { mode: "notify", channel: "telegram", target: "bot1" },
+    state: { lastRunAtMs: Date.now() - 86400_000, lastRunStatus: "ok", nextRunAtMs: Date.now() + 3600_000 },
+  },
+  {
+    id: "cron-2",
+    name: "周报提醒",
+    description: "每周一早上9点发送周报提醒",
+    schedule: { kind: "cron", expr: "0 9 * * 1" },
+    enabled: false,
+    createdAtMs: Date.now() - 14 * 86400_000,
+    updatedAtMs: Date.now() - 3 * 86400_000,
+    sessionTarget: "isolated",
+    wakeMode: "next-heartbeat",
+    payload: { kind: "agentTurn", message: "请提交本周周报" },
+    state: { lastRunAtMs: Date.now() - 7 * 86400_000, lastRunStatus: "ok" },
+  },
+  {
+    id: "cron-3",
+    name: "健康检查",
+    schedule: { kind: "every", everyMs: 1800_000 },
+    enabled: true,
+    createdAtMs: Date.now() - 30 * 86400_000,
+    updatedAtMs: Date.now(),
+    sessionTarget: "main",
+    wakeMode: "now",
+    payload: { kind: "agentTurn", message: "执行系统健康检查" },
+    state: { lastRunAtMs: Date.now() - 1200_000, lastRunStatus: "error", lastError: "Agent timeout", nextRunAtMs: Date.now() + 600_000 },
   },
 ];
 
@@ -186,20 +217,54 @@ export class MockAdapter implements GatewayAdapter {
     return [...MOCK_CRON_TASKS];
   }
 
-  async cronAdd(input: CronTaskInput): Promise<CronTask> {
+  async channelsLogout(_channel: string, _accountId?: string): Promise<{ cleared: boolean }> {
+    return { cleared: true };
+  }
+
+  async webLoginStart(_force?: boolean): Promise<{ qrDataUrl?: string; message: string }> {
     return {
-      id: `cron-${Date.now()}`,
-      ...input,
+      qrDataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      message: "Scan QR code with WhatsApp",
+    };
+  }
+
+  async webLoginWait(): Promise<{ connected: boolean; message: string }> {
+    await new Promise((r) => setTimeout(r, 2000));
+    return { connected: true, message: "WhatsApp connected successfully" };
+  }
+
+  async skillsInstall(_name: string, _installId: string): Promise<{ ok: boolean; message: string }> {
+    return { ok: true, message: "Mock install completed" };
+  }
+
+  async skillsUpdate(_skillKey: string, _patch: SkillUpdatePatch): Promise<{ ok: boolean }> {
+    return { ok: true };
+  }
+
+  async cronAdd(input: CronTaskInput): Promise<CronTask> {
+    const now = Date.now();
+    return {
+      id: `cron-${now}`,
+      name: input.name,
+      description: input.description,
+      schedule: input.schedule,
       enabled: input.enabled ?? true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAtMs: now,
+      updatedAtMs: now,
+      sessionTarget: input.sessionTarget,
+      wakeMode: input.wakeMode,
+      payload: input.payload,
+      delivery: input.delivery,
+      agentId: input.agentId,
+      sessionKey: input.sessionKey,
+      state: {},
     };
   }
 
   async cronUpdate(id: string, patch: Partial<CronTaskInput>): Promise<CronTask> {
     const existing = MOCK_CRON_TASKS.find((t) => t.id === id);
     if (!existing) throw new Error(`Cron task not found: ${id}`);
-    return { ...existing, ...patch, updatedAt: new Date().toISOString() };
+    return { ...existing, ...patch, updatedAtMs: Date.now() };
   }
 
   async cronRemove(_id: string): Promise<void> {}
@@ -229,14 +294,26 @@ export class MockAdapter implements GatewayAdapter {
 
   async usageStatus(): Promise<UsageInfo> {
     return {
-      totalTokens: 125_000,
-      totalCost: 2.5,
-      periodStart: Date.now() - 30 * 86400_000,
-      periodEnd: Date.now(),
-      byModel: {
-        "claude-4": { tokens: 100_000, cost: 2.0 },
-        "claude-4-haiku": { tokens: 25_000, cost: 0.5 },
-      },
+      updatedAt: Date.now(),
+      providers: [
+        {
+          provider: "anthropic",
+          displayName: "Anthropic",
+          plan: "pro",
+          windows: [
+            { label: "daily", usedPercent: 45, resetAt: Date.now() + 12 * 3600_000 },
+            { label: "monthly", usedPercent: 22 },
+          ],
+        },
+        {
+          provider: "openai",
+          displayName: "OpenAI",
+          plan: "tier-3",
+          windows: [
+            { label: "daily", usedPercent: 12 },
+          ],
+        },
+      ],
     };
   }
 }

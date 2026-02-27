@@ -1,6 +1,7 @@
-import type { GatewayAdapter, AdapterEventHandler } from "./adapter";
+import type { GatewayAdapter, AdapterEventHandler, SkillUpdatePatch } from "./adapter";
 import type {
   ChannelInfo,
+  ChannelType,
   ChatMessage,
   ChatSendParams,
   CronTask,
@@ -76,16 +77,38 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async channelsStatus(): Promise<ChannelInfo[]> {
-    return this.rpcClient.request<ChannelInfo[]>("channels.status", { probe: true });
+    const result = await this.rpcClient.request<GatewayChannelsStatusResult>("channels.status", { probe: true });
+    return flattenChannelAccounts(result);
+  }
+
+  async channelsLogout(channel: string, accountId?: string): Promise<{ cleared: boolean }> {
+    return this.rpcClient.request<{ cleared: boolean }>("channels.logout", { channel, accountId });
+  }
+
+  async webLoginStart(force?: boolean): Promise<{ qrDataUrl?: string; message: string }> {
+    return this.rpcClient.request<{ qrDataUrl?: string; message: string }>("web.login.start", { force });
+  }
+
+  async webLoginWait(): Promise<{ connected: boolean; message: string }> {
+    return this.rpcClient.request<{ connected: boolean; message: string }>("web.login.wait");
   }
 
   async skillsStatus(): Promise<SkillInfo[]> {
-    const result = await this.rpcClient.request<{ skills?: SkillInfo[] }>("skills.status");
-    return result.skills ?? [];
+    const result = await this.rpcClient.request<GatewaySkillsStatusResult>("skills.status");
+    return mapSkillEntries(result.skills ?? []);
+  }
+
+  async skillsInstall(name: string, installId: string): Promise<{ ok: boolean; message: string }> {
+    return this.rpcClient.request<{ ok: boolean; message: string }>("skills.install", { name, installId });
+  }
+
+  async skillsUpdate(skillKey: string, patch: SkillUpdatePatch): Promise<{ ok: boolean }> {
+    return this.rpcClient.request<{ ok: boolean }>("skills.update", { skillKey, ...patch });
   }
 
   async cronList(): Promise<CronTask[]> {
-    return this.rpcClient.request<CronTask[]>("cron.list");
+    const result = await this.rpcClient.request<{ jobs?: CronTask[]; total?: number }>("cron.list");
+    return result.jobs ?? [];
   }
 
   async cronAdd(input: CronTaskInput): Promise<CronTask> {
@@ -93,7 +116,7 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async cronUpdate(id: string, patch: Partial<CronTaskInput>): Promise<CronTask> {
-    return this.rpcClient.request<CronTask>("cron.update", { id, ...patch });
+    return this.rpcClient.request<CronTask>("cron.update", { id, patch });
   }
 
   async cronRemove(id: string): Promise<void> {
@@ -115,4 +138,126 @@ export class WsAdapter implements GatewayAdapter {
   async usageStatus(): Promise<UsageInfo> {
     return this.rpcClient.request<UsageInfo>("usage.status");
   }
+}
+
+// --- Gateway raw response types for domain mapping ---
+
+interface GatewayChannelAccountSnapshot {
+  accountId?: string;
+  name?: string;
+  connected?: boolean;
+  configured?: boolean;
+  linked?: boolean;
+  running?: boolean;
+  lastConnectedAt?: number | null;
+  lastMessageAt?: number | null;
+  reconnectAttempts?: number;
+  mode?: string;
+  error?: string;
+  lastError?: string | null;
+}
+
+interface GatewayChannelsStatusResult {
+  channelAccounts?: Record<string, GatewayChannelAccountSnapshot[]>;
+  channelLabels?: Record<string, string>;
+}
+
+function deriveChannelStatus(snap: GatewayChannelAccountSnapshot): ChannelInfo["status"] {
+  const error = snap.error ?? snap.lastError ?? undefined;
+  if (error) return "error";
+
+  if (snap.connected === true) return "connected";
+  if (snap.connected === false) return snap.running ? "connecting" : "disconnected";
+
+  // Gateway snapshots can omit `connected` for some channel implementations.
+  // In that case we infer "connected" from a healthy linked+configured+running runtime.
+  if (snap.running && snap.linked !== false && snap.configured !== false) {
+    return "connected";
+  }
+  if (snap.running) return "connecting";
+  return "disconnected";
+}
+
+function flattenChannelAccounts(result: GatewayChannelsStatusResult): ChannelInfo[] {
+  const accounts = result.channelAccounts ?? {};
+  const labels = result.channelLabels ?? {};
+  const channels: ChannelInfo[] = [];
+
+  for (const [channelType, snapshots] of Object.entries(accounts)) {
+    for (const snap of snapshots) {
+      if (!snap.accountId && snapshots.length === 0) continue;
+      channels.push({
+        id: snap.accountId ? `${channelType}:${snap.accountId}` : channelType,
+        type: channelType as ChannelType,
+        name: snap.name ?? labels[channelType] ?? channelType,
+        status: deriveChannelStatus(snap),
+        accountId: snap.accountId,
+        error: snap.error ?? snap.lastError ?? undefined,
+        configured: snap.configured,
+        linked: snap.linked,
+        running: snap.running,
+        lastConnectedAt: snap.lastConnectedAt,
+        lastMessageAt: snap.lastMessageAt,
+        reconnectAttempts: snap.reconnectAttempts,
+        mode: snap.mode,
+      });
+    }
+  }
+
+  return channels;
+}
+
+// --- Skills mapping ---
+
+interface GatewaySkillEntry {
+  skillKey?: string;
+  name?: string;
+  description?: string;
+  disabled?: boolean;
+  bundled?: boolean;
+  core?: boolean;
+  emoji?: string;
+  version?: string;
+  author?: string;
+  source?: string;
+  homepage?: string;
+  primaryEnv?: string;
+  always?: boolean;
+  eligible?: boolean;
+  blockedByAllowlist?: boolean;
+  requirements?: { bins?: string[]; env?: string[] };
+  missing?: { bins?: string[]; env?: string[] };
+  install?: Array<{ id: string; kind: string; label: string }>;
+  configChecks?: Array<{ path: string; satisfied: boolean }>;
+  config?: Record<string, unknown>;
+}
+
+interface GatewaySkillsStatusResult {
+  skills?: GatewaySkillEntry[];
+}
+
+function mapSkillEntries(entries: GatewaySkillEntry[]): SkillInfo[] {
+  return entries.map((e) => ({
+    id: e.skillKey ?? "",
+    slug: e.skillKey ?? "",
+    name: e.name ?? e.skillKey ?? "",
+    description: e.description ?? "",
+    enabled: !e.disabled,
+    icon: e.emoji ?? "📦",
+    version: e.version ?? "",
+    author: e.author,
+    isCore: e.core,
+    isBundled: e.bundled,
+    config: e.config,
+    source: e.source,
+    homepage: e.homepage,
+    primaryEnv: e.primaryEnv,
+    always: e.always,
+    eligible: e.eligible,
+    blockedByAllowlist: e.blockedByAllowlist,
+    requirements: e.requirements,
+    missing: e.missing,
+    installOptions: e.install,
+    configChecks: e.configChecks,
+  }));
 }

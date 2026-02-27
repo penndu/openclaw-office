@@ -23,6 +23,13 @@ export interface ChannelInfo {
   status: ChannelStatus;
   accountId?: string;
   error?: string;
+  configured?: boolean;
+  linked?: boolean;
+  running?: boolean;
+  lastConnectedAt?: number | null;
+  lastMessageAt?: number | null;
+  reconnectAttempts?: number;
+  mode?: string;
 }
 
 export interface SkillInfo {
@@ -37,6 +44,16 @@ export interface SkillInfo {
   isCore?: boolean;
   isBundled?: boolean;
   config?: Record<string, unknown>;
+  source?: string;
+  homepage?: string;
+  primaryEnv?: string;
+  always?: boolean;
+  eligible?: boolean;
+  blockedByAllowlist?: boolean;
+  requirements?: { bins?: string[]; env?: string[] };
+  missing?: { bins?: string[]; env?: string[] };
+  installOptions?: Array<{ id: string; kind: string; label: string }>;
+  configChecks?: Array<{ path: string; satisfied: boolean }>;
 }
 
 export interface CronJobTarget {
@@ -50,25 +67,53 @@ export type CronSchedule =
   | { kind: "every"; everyMs: number; anchorMs?: number }
   | { kind: "cron"; expr: string; tz?: string };
 
+export type CronPayload =
+  | { kind: "systemEvent"; text: string }
+  | { kind: "agentTurn"; message: string }
+  | { kind: "webhook"; url: string; method?: string; headers?: Record<string, string>; body?: string };
+
+export interface CronDelivery {
+  mode: "none" | "notify" | "webhook";
+  channel?: string;
+  target?: string;
+}
+
+export interface CronJobState {
+  nextRunAtMs?: number | null;
+  lastRunAtMs?: number | null;
+  lastRunStatus?: "ok" | "error" | "skipped" | null;
+  lastError?: string | null;
+  runningAtMs?: number | null;
+}
+
 export interface CronTask {
   id: string;
   name: string;
-  message: string;
-  schedule: string | CronSchedule;
-  target: CronJobTarget;
+  description?: string;
+  schedule: CronSchedule;
   enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastRun?: { time: string; success: boolean; error?: string };
-  nextRun?: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+  agentId?: string;
+  sessionKey?: string;
+  sessionTarget: "main" | "isolated";
+  wakeMode: "next-heartbeat" | "now";
+  payload: CronPayload;
+  delivery?: CronDelivery;
+  state: CronJobState;
 }
 
 export interface CronTaskInput {
   name: string;
-  message: string;
-  schedule: string;
-  target: CronJobTarget;
+  schedule: CronSchedule;
+  sessionTarget: "main" | "isolated";
+  wakeMode: "next-heartbeat" | "now";
+  payload: CronPayload;
+  description?: string;
   enabled?: boolean;
+  delivery?: CronDelivery;
+  agentId?: string;
+  sessionKey?: string;
 }
 
 export type MessageRole = "user" | "assistant" | "system";
@@ -129,12 +174,23 @@ export interface ToolCatalog {
   tools: ToolCatalogEntry[];
 }
 
+export interface UsageProviderWindow {
+  label: string;
+  usedPercent: number;
+  resetAt?: number;
+}
+
+export interface UsageProviderInfo {
+  provider: string;
+  displayName: string;
+  plan?: string;
+  windows: UsageProviderWindow[];
+  error?: string;
+}
+
 export interface UsageInfo {
-  totalTokens: number;
-  totalCost: number;
-  periodStart: number;
-  periodEnd: number;
-  byModel: Record<string, { tokens: number; cost: number }>;
+  updatedAt: number;
+  providers: UsageProviderInfo[];
 }
 
 // Streaming 事件类型（chat 事件的 payload 格式）

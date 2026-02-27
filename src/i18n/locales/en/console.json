@@ -2,26 +2,226 @@
   "dashboard": {
     "title": "Dashboard",
     "description": "System overview: Gateway status, channel connections, skill status",
-    "comingSoon": "Dashboard coming soon",
-    "waitingPhase": "Waiting for Phase C implementation"
+    "loading": "Loading dashboard data...",
+    "stats": {
+      "channels": "Channels",
+      "skills": "Skills",
+      "usage": "Provider Usage",
+      "uptime": "Uptime",
+      "uptimeOnline": "Online"
+    },
+    "alerts": {
+      "gatewayDisconnected": "Gateway disconnected, data may not be up to date",
+      "channelErrors": "{{count}} channel(s) with errors"
+    },
+    "quickNav": {
+      "title": "Quick Navigation"
+    },
+    "channelOverview": {
+      "title": "Connected Channels",
+      "empty": "No connected channels"
+    },
+    "skillOverview": {
+      "title": "Active Skills",
+      "empty": "No enabled skills"
+    }
   },
   "channels": {
     "title": "Channels",
     "description": "Manage messaging channels: Telegram, Discord, WhatsApp, etc.",
-    "comingSoon": "Channels management coming soon",
-    "waitingPhase": "Waiting for Phase C implementation"
+    "stats": {
+      "total": "Total",
+      "connected": "Connected",
+      "errors": "Errors"
+    },
+    "card": {
+      "lastConnected": "Last connected: {{time}}",
+      "details": "Details",
+      "logout": "Logout"
+    },
+    "empty": {
+      "title": "No channels configured",
+      "description": "Select a channel type below to get started"
+    },
+    "available": {
+      "title": "Available Channel Types",
+      "configured": "Configured",
+      "add": "Add"
+    },
+    "types": {
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "whatsapp": "WhatsApp",
+      "signal": "Signal",
+      "feishu": "Feishu",
+      "imessage": "iMessage",
+      "matrix": "Matrix",
+      "line": "LINE",
+      "msteams": "MS Teams",
+      "googlechat": "Google Chat",
+      "mattermost": "Mattermost"
+    },
+    "fields": {
+      "botToken": "Bot Token",
+      "applicationId": "Application ID",
+      "phoneNumber": "Phone Number",
+      "appId": "App ID",
+      "appSecret": "App Secret",
+      "homeserver": "Homeserver URL",
+      "accessToken": "Access Token",
+      "channelAccessToken": "Channel Access Token",
+      "channelSecret": "Channel Secret",
+      "appPassword": "App Password",
+      "serviceAccount": "Service Account JSON",
+      "serverUrl": "Server URL"
+    },
+    "placeholders": {
+      "botToken": "Enter Bot Token",
+      "applicationId": "Enter Application ID",
+      "phoneNumber": "+1...",
+      "appId": "Enter App ID",
+      "appSecret": "Enter App Secret",
+      "homeserver": "https://matrix.org",
+      "accessToken": "Enter Access Token",
+      "channelAccessToken": "Enter Channel Access Token",
+      "channelSecret": "Enter Channel Secret",
+      "appPassword": "Enter App Password",
+      "serviceAccount": "Paste Service Account JSON",
+      "serverUrl": "https://mattermost.example.com"
+    },
+    "configDialog": {
+      "required": "This field is required",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "qr": {
+      "description": "Scan the QR code with your WhatsApp mobile app to pair",
+      "startPairing": "Start Pairing",
+      "loading": "Generating QR code...",
+      "scanPrompt": "Scan QR code with your phone",
+      "waitingScan": "Waiting for scan...",
+      "success": "Paired successfully!",
+      "error": "Pairing failed"
+    },
+    "logout": {
+      "title": "Logout Channel",
+      "description": "Are you sure you want to logout \"{{name}}\"? You will need to re-pair."
+    }
   },
   "skills": {
     "title": "Skills",
     "description": "Manage skills and plugins: install, enable/disable, configure",
-    "comingSoon": "Skills management coming soon",
-    "waitingPhase": "Waiting for Phase C implementation"
+    "tabs": {
+      "installed": "Installed",
+      "marketplace": "Marketplace"
+    },
+    "installed": {
+      "searchPlaceholder": "Search installed skills..."
+    },
+    "filters": {
+      "all": "All ({{count}})",
+      "built-in": "Built-in ({{count}})",
+      "marketplace": "Marketplace ({{count}})"
+    },
+    "source": {
+      "builtIn": "Built-in",
+      "marketplace": "Marketplace"
+    },
+    "card": {
+      "configure": "Configure",
+      "install": "Install",
+      "installing": "Installing...",
+      "missingDeps": "Missing dependencies",
+      "coreProtected": "Core skill cannot be disabled"
+    },
+    "detail": {
+      "info": "Info",
+      "source": "Source",
+      "version": "Version",
+      "author": "Author",
+      "primaryEnv": "Primary environment variable",
+      "homepage": "Homepage",
+      "requirements": "Requirements",
+      "config": "Configuration",
+      "configChecks": "Config Checks",
+      "noConfig": "This skill requires no configuration",
+      "apiKeyPlaceholder": "Enter API Key",
+      "envVars": "Environment Variables",
+      "addVariable": "Add Variable",
+      "noEnvVars": "No environment variables configured",
+      "keyPlaceholder": "Key",
+      "valuePlaceholder": "Value",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "saving": "Saving..."
+    },
+    "install": {
+      "title": "Install {{name}}"
+    },
+    "marketplace": {
+      "securityNote": "Review the skill source, homepage, and dependency requirements before installing. This web marketplace view is built from the installable skills returned by the Gateway.",
+      "searchPlaceholder": "Search marketplace skills...",
+      "searchButton": "Search",
+      "emptyTitle": "No marketplace skills",
+      "emptyDescription": "The current Gateway did not return any marketplace-ready skills",
+      "noResults": "No marketplace skills match your search",
+      "installed": "Installed",
+      "version": "Version {{version}}",
+      "author": "Author {{author}}",
+      "learnMore": "Details"
+    },
+    "empty": {
+      "title": "No skills found",
+      "description": "Try switching tabs or adjusting filters"
+    }
   },
   "cron": {
     "title": "Cron Tasks",
     "description": "Manage cron tasks: create, edit, enable/disable, run immediately",
-    "comingSoon": "Cron task management coming soon",
-    "waitingPhase": "Waiting for Phase C implementation"
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "paused": "Paused",
+      "failed": "Failed"
+    },
+    "card": {
+      "lastRun": "Last run",
+      "nextRun": "Next run",
+      "runNow": "Run now"
+    },
+    "presets": {
+      "everyHour": "Every hour",
+      "daily9am": "Daily 9 AM",
+      "daily6pm": "Daily 6 PM",
+      "weeklyMon": "Weekly Monday 9 AM",
+      "monthlyFirst": "Monthly 1st",
+      "every30min": "Every 30 min"
+    },
+    "dialog": {
+      "createTitle": "Create Cron Task",
+      "editTitle": "Edit Cron Task",
+      "name": "Task Name",
+      "namePlaceholder": "Enter task name",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional task description",
+      "schedule": "Schedule",
+      "cronHelp": "Standard cron expression: min hour day month weekday",
+      "message": "Message",
+      "messagePlaceholder": "Enter message to send to the agent",
+      "required": "This field is required"
+    },
+    "empty": {
+      "title": "No cron tasks",
+      "createFirst": "Create your first task"
+    },
+    "delete": {
+      "title": "Delete Cron Task",
+      "description": "Are you sure you want to delete this cron task? This cannot be undone."
+    },
+    "run": {
+      "title": "Run Now",
+      "description": "Are you sure you want to run this cron task immediately?"
+    }
   },
   "settings": {
     "title": "Settings",

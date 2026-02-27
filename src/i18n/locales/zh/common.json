@@ -4,14 +4,27 @@
     "connected": "已连接",
     "reconnecting": "重连中",
     "disconnected": "未连接",
-    "error": "连接错误"
+    "error": "连接错误",
+    "active": "活跃",
+    "paused": "已暂停",
+    "ok": "正常",
+    "failed": "失败",
+    "running": "运行中",
+    "pending": "等待中",
+    "disabled": "已禁用"
   },
   "actions": {
     "send": "发送",
     "cancel": "取消",
     "close": "关闭",
     "confirm": "确定",
-    "stop": "停止"
+    "stop": "停止",
+    "retry": "重试",
+    "save": "保存",
+    "delete": "删除",
+    "refresh": "刷新",
+    "create": "创建",
+    "edit": "编辑"
   },
   "time": {
     "justNow": "刚刚",

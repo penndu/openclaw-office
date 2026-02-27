@@ -53,9 +53,10 @@ describe("MockAdapter", () => {
   it("cronAdd returns task with generated id", async () => {
     const task = await adapter.cronAdd({
       name: "Test",
-      message: "hello",
-      schedule: "0 * * * *",
-      target: { channelType: "telegram", channelId: "c1", channelName: "Bot" },
+      schedule: { kind: "cron", expr: "0 * * * *" },
+      sessionTarget: "isolated",
+      wakeMode: "now",
+      payload: { kind: "agentTurn", message: "hello" },
     });
     expect(task.id).toBeDefined();
     expect(task.name).toBe("Test");
@@ -70,9 +71,10 @@ describe("MockAdapter", () => {
 
   it("usageStatus returns valid usage info", async () => {
     const usage = await adapter.usageStatus();
-    expect(usage).toHaveProperty("totalTokens");
-    expect(usage).toHaveProperty("totalCost");
-    expect(typeof usage.totalTokens).toBe("number");
+    expect(usage).toHaveProperty("updatedAt");
+    expect(usage).toHaveProperty("providers");
+    expect(Array.isArray(usage.providers)).toBe(true);
+    expect(usage.providers.length).toBeGreaterThan(0);
   });
 
   it("onEvent returns unsubscribe function", async () => {

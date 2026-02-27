@@ -17,6 +17,12 @@ import type { AgentsListResponse } from "./types";
 
 export type AdapterEventHandler = (event: string, payload: unknown) => void;
 
+export interface SkillUpdatePatch {
+  enabled?: boolean;
+  apiKey?: string;
+  env?: Record<string, string>;
+}
+
 export interface GatewayAdapter {
   connect(): Promise<void>;
   disconnect(): void;
@@ -33,9 +39,14 @@ export interface GatewayAdapter {
 
   // Channels
   channelsStatus(): Promise<ChannelInfo[]>;
+  channelsLogout(channel: string, accountId?: string): Promise<{ cleared: boolean }>;
+  webLoginStart(force?: boolean): Promise<{ qrDataUrl?: string; message: string }>;
+  webLoginWait(): Promise<{ connected: boolean; message: string }>;
 
   // Skills
   skillsStatus(): Promise<SkillInfo[]>;
+  skillsInstall(name: string, installId: string): Promise<{ ok: boolean; message: string }>;
+  skillsUpdate(skillKey: string, patch: SkillUpdatePatch): Promise<{ ok: boolean }>;
 
   // Cron
   cronList(): Promise<CronTask[]>;

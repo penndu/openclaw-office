@@ -4,14 +4,27 @@
     "connected": "Connected",
     "reconnecting": "Reconnecting",
     "disconnected": "Disconnected",
-    "error": "Connection Error"
+    "error": "Connection Error",
+    "active": "Active",
+    "paused": "Paused",
+    "ok": "OK",
+    "failed": "Failed",
+    "running": "Running",
+    "pending": "Pending",
+    "disabled": "Disabled"
   },
   "actions": {
     "send": "Send",
     "cancel": "Cancel",
     "close": "Close",
     "confirm": "Confirm",
-    "stop": "Stop"
+    "stop": "Stop",
+    "retry": "Retry",
+    "save": "Save",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "create": "Create",
+    "edit": "Edit"
   },
   "time": {
     "justNow": "just now",
