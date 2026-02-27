@@ -92,6 +92,7 @@ export function ProvidersSection() {
 
       {editTarget && (
         <EditProviderDialog
+          key={editTarget.id}
           open={!!editTarget}
           providerId={editTarget.id}
           config={editTarget.config}
