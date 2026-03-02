@@ -13,12 +13,14 @@ Phase 2 完成了 Isometric 3D 办公室的基础场景和 Agent 角色系统，
 ## Capabilities
 
 ### New Capabilities
+
 - `postprocessing-effects`: Bloom 后处理特效系统，为 3D 场景中的连线、状态特效添加发光效果，含性能开关
 - `day-night-theme`: 日/夜主题切换能力，包含灯光方案、背景色、UI 主题的联动切换和平滑过渡
 - `skill-hologram`: 全息工具面板，Agent 调用工具时的 3D 悬浮显示，含工具信息、进度动画和完成反馈
 - `svg-avatar-generator`: 基于 agentId hash 的确定性 SVG 头像生成器，产出脸型+发型+颜色组合的可辨识头像
 
 ### Modified Capabilities
+
 - `office-store`: 新增 `theme: "light" | "dark"` 状态字段和 `setTheme` action
 
 ## Impact

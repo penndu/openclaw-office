@@ -151,16 +151,17 @@ async function apiFetch<T>(path: string, params?: Record<string, string>): Promi
 // --- Public API ---
 
 export async function clawhubSearch(query: string, limit = 20): Promise<ClawHubSearchResult[]> {
-  const result = await apiFetch<{ results: ClawHubSearchResult[] }>(
-    "/api/v1/search",
-    { q: query, limit: String(limit) },
-  );
+  const result = await apiFetch<{ results: ClawHubSearchResult[] }>("/api/v1/search", {
+    q: query,
+    limit: String(limit),
+  });
   return result.results ?? [];
 }
 
-export async function clawhubExplore(
-  options?: { limit?: number; cursor?: string },
-): Promise<ClawHubExploreResponse> {
+export async function clawhubExplore(options?: {
+  limit?: number;
+  cursor?: string;
+}): Promise<ClawHubExploreResponse> {
   const limit = options?.limit ?? 20;
   const cursor = options?.cursor;
   const cacheKey = `explore:${limit}:${cursor ?? ""}`;

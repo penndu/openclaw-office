@@ -1,7 +1,7 @@
-import { useTranslation } from "react-i18next";
 import { Brain, Image, Shield } from "lucide-react";
-import { inferProviderType } from "@/lib/provider-types";
+import { useTranslation } from "react-i18next";
 import type { ModelCatalogEntry } from "@/gateway/adapter-types";
+import { inferProviderType } from "@/lib/provider-types";
 
 interface CatalogProviderCardProps {
   providerId: string;
@@ -18,7 +18,9 @@ export function CatalogProviderCard({ providerId, models }: CatalogProviderCardP
     <div className="rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-3 dark:border-emerald-700 dark:bg-emerald-900/10">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-xl" title={meta.name}>{meta.icon}</span>
+          <span className="text-xl" title={meta.name}>
+            {meta.icon}
+          </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -53,13 +55,19 @@ export function CatalogProviderCard({ providerId, models }: CatalogProviderCardP
                 {t("settings.providers.modelCount", { count: models.length })}
               </span>
               {reasoningCount > 0 && (
-                <span className="flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400" title={t("settings.providers.models.reasoning")}>
+                <span
+                  className="flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400"
+                  title={t("settings.providers.models.reasoning")}
+                >
                   <Brain className="h-3 w-3" />
                   {reasoningCount}
                 </span>
               )}
               {imageCount > 0 && (
-                <span className="flex items-center gap-0.5 text-xs text-green-600 dark:text-green-400" title={t("settings.providers.models.input_image")}>
+                <span
+                  className="flex items-center gap-0.5 text-xs text-green-600 dark:text-green-400"
+                  title={t("settings.providers.models.input_image")}
+                >
                   <Image className="h-3 w-3" />
                   {imageCount}
                 </span>

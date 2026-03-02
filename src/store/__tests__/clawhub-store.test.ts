@@ -15,7 +15,8 @@ vi.mock("@/gateway/clawhub-client", () => ({
   },
 }));
 
-const { clawhubSearch, clawhubExplore, clawhubSkillDetail, ClawHubError } = await import("@/gateway/clawhub-client");
+const { clawhubSearch, clawhubExplore, clawhubSkillDetail, ClawHubError } =
+  await import("@/gateway/clawhub-client");
 
 const mockSearch = vi.mocked(clawhubSearch);
 const mockExplore = vi.mocked(clawhubExplore);
@@ -45,7 +46,16 @@ afterEach(() => {
 describe("useClawHubStore", () => {
   describe("searchImmediate", () => {
     it("performs search and updates results", async () => {
-      const results = [{ score: 1, slug: "test", displayName: "Test", summary: null, version: null, updatedAt: 1000 }];
+      const results = [
+        {
+          score: 1,
+          slug: "test",
+          displayName: "Test",
+          summary: null,
+          version: null,
+          updatedAt: 1000,
+        },
+      ];
       mockSearch.mockResolvedValueOnce(results);
 
       await useClawHubStore.getState().searchImmediate("test");
@@ -81,7 +91,24 @@ describe("useClawHubStore", () => {
 
   describe("explore", () => {
     it("loads explore items", async () => {
-      const items = [{ slug: "s1", displayName: "S1", summary: null, tags: {}, stats: { downloads: 0, installsAllTime: 0, installsCurrent: 0, stars: 0, versions: 1, comments: 0 }, createdAt: 1, updatedAt: 2 }];
+      const items = [
+        {
+          slug: "s1",
+          displayName: "S1",
+          summary: null,
+          tags: {},
+          stats: {
+            downloads: 0,
+            installsAllTime: 0,
+            installsCurrent: 0,
+            stars: 0,
+            versions: 1,
+            comments: 0,
+          },
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      ];
       mockExplore.mockResolvedValueOnce({ items, nextCursor: "abc" });
 
       await useClawHubStore.getState().explore();
@@ -92,11 +119,45 @@ describe("useClawHubStore", () => {
 
     it("appends items on loadMore", async () => {
       useClawHubStore.setState({
-        exploreItems: [{ slug: "old", displayName: "Old", summary: null, tags: {}, stats: { downloads: 0, installsAllTime: 0, installsCurrent: 0, stars: 0, versions: 1, comments: 0 }, createdAt: 1, updatedAt: 2 }],
+        exploreItems: [
+          {
+            slug: "old",
+            displayName: "Old",
+            summary: null,
+            tags: {},
+            stats: {
+              downloads: 0,
+              installsAllTime: 0,
+              installsCurrent: 0,
+              stars: 0,
+              versions: 1,
+              comments: 0,
+            },
+            createdAt: 1,
+            updatedAt: 2,
+          },
+        ],
         nextCursor: "cursor1",
       });
 
-      const newItems = [{ slug: "new", displayName: "New", summary: null, tags: {}, stats: { downloads: 0, installsAllTime: 0, installsCurrent: 0, stars: 0, versions: 1, comments: 0 }, createdAt: 1, updatedAt: 2 }];
+      const newItems = [
+        {
+          slug: "new",
+          displayName: "New",
+          summary: null,
+          tags: {},
+          stats: {
+            downloads: 0,
+            installsAllTime: 0,
+            installsCurrent: 0,
+            stars: 0,
+            versions: 1,
+            comments: 0,
+          },
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      ];
       mockExplore.mockResolvedValueOnce({ items: newItems, nextCursor: null });
 
       await useClawHubStore.getState().explore(true);
@@ -114,7 +175,26 @@ describe("useClawHubStore", () => {
 
   describe("fetchDetail", () => {
     it("fetches and stores detail", async () => {
-      const detail = { skill: { slug: "test", displayName: "Test", summary: null, tags: {}, stats: { downloads: 1, installsAllTime: 0, installsCurrent: 0, stars: 0, versions: 1, comments: 0 }, createdAt: 1, updatedAt: 2 }, latestVersion: null, owner: null };
+      const detail = {
+        skill: {
+          slug: "test",
+          displayName: "Test",
+          summary: null,
+          tags: {},
+          stats: {
+            downloads: 1,
+            installsAllTime: 0,
+            installsCurrent: 0,
+            stars: 0,
+            versions: 1,
+            comments: 0,
+          },
+          createdAt: 1,
+          updatedAt: 2,
+        },
+        latestVersion: null,
+        owner: null,
+      };
       mockDetail.mockResolvedValueOnce(detail);
 
       await useClawHubStore.getState().fetchDetail("test");
@@ -128,7 +208,9 @@ describe("useClawHubStore", () => {
     it("clears search state", () => {
       useClawHubStore.setState({
         searchQuery: "test",
-        searchResults: [{ score: 1, slug: "t", displayName: "T", summary: null, version: null, updatedAt: 1 }],
+        searchResults: [
+          { score: 1, slug: "t", displayName: "T", summary: null, version: null, updatedAt: 1 },
+        ],
         searchError: "err",
       });
 

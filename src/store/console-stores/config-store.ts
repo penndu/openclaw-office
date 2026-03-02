@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { waitForAdapter } from "@/gateway/adapter-provider";
 import type {
   ConfigPatchResult,
   ConfigSchemaResponse,
@@ -7,7 +8,6 @@ import type {
   StatusSummary,
   UpdateRunResult,
 } from "@/gateway/adapter-types";
-import { waitForAdapter } from "@/gateway/adapter-provider";
 
 export interface RestartState {
   status: "pending" | "disconnected" | "reconnecting" | "complete";
@@ -73,19 +73,22 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
 
   restartState: null,
 
-  setRestartPending: (delayMs) => set({
-    restartState: { status: "pending", startedAt: Date.now(), estimatedDelayMs: delayMs },
-  }),
+  setRestartPending: (delayMs) =>
+    set({
+      restartState: { status: "pending", startedAt: Date.now(), estimatedDelayMs: delayMs },
+    }),
 
-  setRestartReconnecting: () => set((s) => {
-    if (!s.restartState) return {};
-    return { restartState: { ...s.restartState, status: "reconnecting" } };
-  }),
+  setRestartReconnecting: () =>
+    set((s) => {
+      if (!s.restartState) return {};
+      return { restartState: { ...s.restartState, status: "reconnecting" } };
+    }),
 
-  setRestartComplete: () => set((s) => {
-    if (!s.restartState) return {};
-    return { restartState: { ...s.restartState, status: "complete" } };
-  }),
+  setRestartComplete: () =>
+    set((s) => {
+      if (!s.restartState) return {};
+      return { restartState: { ...s.restartState, status: "complete" } };
+    }),
 
   clearRestart: () => set({ restartState: null }),
 

@@ -9,6 +9,7 @@ OpenClaw Gateway 已有 `chat.send`、`chat.history`、`chat.abort` 方法和 `a
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 在 Office 视图（AppShell）底部集成 ChatDockBar 输入条和 ChatTimelineDrawer 消息抽屉
 - 实现完整的消息发送链路：输入 → 发送 → 乐观更新 → streaming 接收 → 最终消息
 - 支持 streaming 消息展示：thinking 折叠块、tool_use 卡片、Markdown 文本、streaming 进度指示
@@ -17,6 +18,7 @@ OpenClaw Gateway 已有 `chat.send`、`chat.history`、`chat.abort` 方法和 `a
 - 完善 MockAdapter chat 方法，支持模拟多步骤 streaming 响应
 
 **Non-Goals:**
+
 - 不实现文件附件的完整上传流程（仅做 UI 占位，显示 staging 状态）
 - 不实现图片预览 lightbox（留给后续迭代）
 - 不实现"弹出独立聊天窗口"功能
@@ -30,6 +32,7 @@ OpenClaw Gateway 已有 `chat.send`、`chat.history`、`chat.abort` 方法和 `a
 **选择：** 将 ChatDockBar 和 ChatTimelineDrawer 放在 AppShell 的 `<main>` 区域底部，位于 OfficeView 之上、ActionBar 之上。
 
 **布局结构：**
+
 ```
 <div className="flex flex-col h-screen">
   <TopBar />
@@ -48,6 +51,7 @@ OpenClaw Gateway 已有 `chat.send`、`chat.history`、`chat.abort` 方法和 `a
 ```
 
 **理由：**
+
 - ChatDockBar 始终可见（收起态），用户随时可输入
 - ChatTimelineDrawer 展开时向上推压 OfficeView，而非遮罩（不阻挡场景操作）
 - ActionBar 在 Chat 之下，保持原有位置关系
@@ -59,6 +63,7 @@ OpenClaw Gateway 已有 `chat.send`、`chat.history`、`chat.abort` 方法和 `a
 **选择：** 通过 Adapter 的 `onEvent` 监听 `chat` 和 `agent` 事件，在 `chat-dock-store` 中维护 streaming 状态机。
 
 **状态机流转：**
+
 ```
 idle → sending → streaming → done
                            → error
@@ -66,6 +71,7 @@ idle → sending → streaming → done
 ```
 
 **消息更新策略：**
+
 1. 用户发送时创建 optimistic user message（立即显示）
 2. 收到 `chat.stream.start` 事件后创建空的 assistant message（isStreaming: true）
 3. 收到 `chat.stream.delta` 事件后增量合并 text content
@@ -82,6 +88,7 @@ idle → sending → streaming → done
 **选择：** chat-dock-store 作为独立 Zustand store，不合并到 office-store。组件通过各自的 selector 订阅，避免交叉触发。
 
 **性能隔离措施：**
+
 1. ChatDockBar / ChatTimelineDrawer 仅订阅 `useChatDockStore`
 2. OfficeView / AgentDot 仅订阅 `useOfficeStore`
 3. Dock 展开/收起状态变化触发 AppShell 重布局时，使用 CSS transition 而非条件渲染，减少 unmount/remount
@@ -94,6 +101,7 @@ idle → sending → streaming → done
 **选择：** 单个 `MessageBubble` 组件根据 message 类型分发渲染子组件。
 
 **组件拆分：**
+
 ```
 MessageBubble
 ├── UserMessage      ← 用户消息（纯文本 + 附件预览）
@@ -111,6 +119,7 @@ MessageBubble
 **选择：** 使用 `react-markdown` + `remark-gfm` 进行 Markdown 渲染。
 
 **理由：**
+
 - `react-markdown` 是 React 生态最成熟的 Markdown 渲染库，体积合理（~30KB gzip）
 - 支持 GFM（表格、任务列表、删除线）
 - 支持自定义组件映射，可与项目的 Tailwind 样式集成
@@ -123,17 +132,20 @@ MessageBubble
 **选择：** Chat Dock 默认始终显示在 Office 视图底部，默认与 main Agent 对话。在 ChatDockBar 左侧放置 Agent 选择下拉组件（AgentSelector），显示当前对话的 Agent 名称。
 
 **默认行为：**
+
 - Office 页面加载后 ChatDockBar 立即可见，不需要先点击某个 Agent
 - 默认目标 Agent 为 main Agent（即 `agents.list` 返回的 `defaultId`）
 - chat.send 调用时无需指定 agent——Gateway 默认投递到 main Agent
 
 **Agent 选择器行为：**
+
 - 显示当前对话的 Agent 名称和头像色块
 - 下拉列表显示所有可用 Agent（从 office-store 的 agents map 获取）
 - 选择不同 Agent 时清空当前消息列表，后续消息投递到所选 Agent 的会话
 - 如果用户在 2D/3D 中点击了某个 Agent，ChatDockBar 可联动切换到该 Agent（可选）
 
-**理由：** 
+**理由：**
+
 - 默认显示降低了用户发现对话能力的门槛——用户进入 Office 就能看到输入框
 - Agent 选择器比会话选择器更直观，用户关心的是"和谁对话"而非"哪个 session key"
 - 内部仍通过 session key 管理，但 UI 层面以 Agent 为单位呈现
@@ -143,6 +155,7 @@ MessageBubble
 **选择：** `MockAdapter.chatSend` 使用 `setTimeout` 序列模拟多步骤 streaming 响应。
 
 **模拟流程：**
+
 ```
 chatSend() →
   0ms:   emit("chat", { type: "stream.start", runId })

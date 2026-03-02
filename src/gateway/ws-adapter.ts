@@ -28,8 +28,8 @@ import type {
   UpdateRunResult,
   UsageInfo,
 } from "./adapter-types";
-import type { AgentsListResponse } from "./types";
 import type { GatewayRpcClient } from "./rpc-client";
+import type { AgentsListResponse } from "./types";
 import type { GatewayWsClient } from "./ws-client";
 
 export class WsAdapter implements GatewayAdapter {
@@ -41,7 +41,15 @@ export class WsAdapter implements GatewayAdapter {
     private rpcClient: GatewayRpcClient,
   ) {}
 
-  private static readonly WATCHED_EVENTS = ["agent", "chat", "presence", "health", "heartbeat", "cron", "shutdown"] as const;
+  private static readonly WATCHED_EVENTS = [
+    "agent",
+    "chat",
+    "presence",
+    "health",
+    "heartbeat",
+    "cron",
+    "shutdown",
+  ] as const;
 
   async connect(): Promise<void> {
     for (const eventName of WsAdapter.WATCHED_EVENTS) {
@@ -64,7 +72,9 @@ export class WsAdapter implements GatewayAdapter {
 
   onEvent(handler: AdapterEventHandler): () => void {
     this.handlers.add(handler);
-    return () => { this.handlers.delete(handler); };
+    return () => {
+      this.handlers.delete(handler);
+    };
   }
 
   async chatHistory(sessionKey?: string): Promise<ChatMessage[]> {
@@ -93,7 +103,9 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async channelsStatus(): Promise<ChannelInfo[]> {
-    const result = await this.rpcClient.request<GatewayChannelsStatusResult>("channels.status", { probe: true });
+    const result = await this.rpcClient.request<GatewayChannelsStatusResult>("channels.status", {
+      probe: true,
+    });
     return flattenChannelAccounts(result);
   }
 
@@ -102,7 +114,9 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async webLoginStart(force?: boolean): Promise<{ qrDataUrl?: string; message: string }> {
-    return this.rpcClient.request<{ qrDataUrl?: string; message: string }>("web.login.start", { force });
+    return this.rpcClient.request<{ qrDataUrl?: string; message: string }>("web.login.start", {
+      force,
+    });
   }
 
   async webLoginWait(): Promise<{ connected: boolean; message: string }> {
@@ -128,7 +142,10 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async cronAdd(input: CronTaskInput): Promise<CronTask> {
-    return this.rpcClient.request<CronTask>("cron.add", input as unknown as Record<string, unknown>);
+    return this.rpcClient.request<CronTask>(
+      "cron.add",
+      input as unknown as Record<string, unknown>,
+    );
   }
 
   async cronUpdate(id: string, patch: Partial<CronTaskInput>): Promise<CronTask> {
@@ -148,15 +165,24 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async agentsCreate(params: AgentCreateParams): Promise<AgentCreateResult> {
-    return this.rpcClient.request<AgentCreateResult>("agents.create", params as unknown as Record<string, unknown>);
+    return this.rpcClient.request<AgentCreateResult>(
+      "agents.create",
+      params as unknown as Record<string, unknown>,
+    );
   }
 
   async agentsUpdate(params: AgentUpdateParams): Promise<AgentUpdateResult> {
-    return this.rpcClient.request<AgentUpdateResult>("agents.update", params as unknown as Record<string, unknown>);
+    return this.rpcClient.request<AgentUpdateResult>(
+      "agents.update",
+      params as unknown as Record<string, unknown>,
+    );
   }
 
   async agentsDelete(params: AgentDeleteParams): Promise<AgentDeleteResult> {
-    return this.rpcClient.request<AgentDeleteResult>("agents.delete", params as unknown as Record<string, unknown>);
+    return this.rpcClient.request<AgentDeleteResult>(
+      "agents.delete",
+      params as unknown as Record<string, unknown>,
+    );
   }
 
   async agentsFilesList(agentId: string): Promise<AgentFilesListResult> {
@@ -167,8 +193,16 @@ export class WsAdapter implements GatewayAdapter {
     return this.rpcClient.request<AgentFileContent>("agents.files.get", { agentId, name });
   }
 
-  async agentsFilesSet(agentId: string, name: string, content: string): Promise<AgentFileSetResult> {
-    return this.rpcClient.request<AgentFileSetResult>("agents.files.set", { agentId, name, content });
+  async agentsFilesSet(
+    agentId: string,
+    name: string,
+    content: string,
+  ): Promise<AgentFileSetResult> {
+    return this.rpcClient.request<AgentFileSetResult>("agents.files.set", {
+      agentId,
+      name,
+      content,
+    });
   }
 
   async toolsCatalog(): Promise<ToolCatalog> {
@@ -189,10 +223,10 @@ export class WsAdapter implements GatewayAdapter {
   }
 
   async configPatch(raw: string, baseHash?: string): Promise<ConfigPatchResult> {
-    return this.rpcClient.request<ConfigPatchResult>(
-      "config.patch",
-      { raw, ...(baseHash ? { baseHash } : {}) },
-    );
+    return this.rpcClient.request<ConfigPatchResult>("config.patch", {
+      raw,
+      ...(baseHash ? { baseHash } : {}),
+    });
   }
 
   async configSchema(): Promise<ConfigSchemaResponse> {

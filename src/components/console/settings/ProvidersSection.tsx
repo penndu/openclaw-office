@@ -1,16 +1,18 @@
+import { Plus, BrainCircuit } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, BrainCircuit } from "lucide-react";
-import { useConfigStore } from "@/store/console-stores/config-store";
-import { ProviderCard } from "./ProviderCard";
-import { CatalogProviderCard } from "./CatalogProviderCard";
-import { AddProviderDialog } from "./AddProviderDialog";
-import { EditProviderDialog } from "./EditProviderDialog";
 import { ConfirmDialog } from "@/components/console/shared/ConfirmDialog";
 import { EmptyState } from "@/components/console/shared/EmptyState";
 import type { ModelCatalogEntry } from "@/gateway/adapter-types";
+import { useConfigStore } from "@/store/console-stores/config-store";
+import { AddProviderDialog } from "./AddProviderDialog";
+import { CatalogProviderCard } from "./CatalogProviderCard";
+import { EditProviderDialog } from "./EditProviderDialog";
+import { ProviderCard } from "./ProviderCard";
 
-function extractProviders(config: Record<string, unknown> | null): Record<string, Record<string, unknown>> {
+function extractProviders(
+  config: Record<string, unknown> | null,
+): Record<string, Record<string, unknown>> {
   if (!config) return {};
   const models = config.models as Record<string, unknown> | undefined;
   const providers = models?.providers as Record<string, Record<string, unknown>> | undefined;
@@ -38,7 +40,10 @@ export function ProvidersSection() {
   const fetchCatalogModels = useConfigStore((s) => s.fetchCatalogModels);
 
   const [addOpen, setAddOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<{ id: string; config: Record<string, unknown> } | null>(null);
+  const [editTarget, setEditTarget] = useState<{
+    id: string;
+    config: Record<string, unknown>;
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,7 +81,9 @@ export function ProvidersSection() {
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
             {t("settings.providers.title")}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.providers.description")}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t("settings.providers.description")}
+          </p>
         </div>
         <button
           type="button"

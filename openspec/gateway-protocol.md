@@ -12,9 +12,9 @@
 ```typescript
 type GatewayRequest = {
   type: "req";
-  id: string;      // 请求 ID，用 crypto.randomUUID()
-  method: string;   // 方法名，如 "connect", "agents.list"
-  params?: unknown;  // 方法参数
+  id: string; // 请求 ID，用 crypto.randomUUID()
+  method: string; // 方法名，如 "connect", "agents.list"
+  params?: unknown; // 方法参数
 };
 ```
 
@@ -23,9 +23,10 @@ type GatewayRequest = {
 ```typescript
 type GatewayResponse = {
   type: "res";
-  id: string;       // 对应请求的 ID
-  result?: unknown;  // 成功时的结果
-  error?: {          // 失败时的错误
+  id: string; // 对应请求的 ID
+  result?: unknown; // 成功时的结果
+  error?: {
+    // 失败时的错误
     code: number;
     message: string;
   };
@@ -37,9 +38,9 @@ type GatewayResponse = {
 ```typescript
 type GatewayEventFrame = {
   type: "event";
-  event: string;     // 事件名，如 "agent", "presence", "health"
-  payload: unknown;  // 事件数据
-  seq?: number;      // 序列号
+  event: string; // 事件名，如 "agent", "presence", "health"
+  payload: unknown; // 事件数据
+  seq?: number; // 序列号
   stateVersion?: number;
 };
 ```
@@ -87,21 +88,22 @@ type GatewayEventFrame = {
 
 ### ConnectParams 字段说明
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `minProtocol` | number | 最低支持的协议版本，设 1 |
-| `maxProtocol` | number | 最高支持的协议版本，设 1 |
-| `client.id` | string | 客户端唯一标识 |
-| `client.displayName` | string | 显示名称（可选） |
-| `client.version` | string | 客户端版本号 |
-| `client.platform` | string | 平台，web/macos/linux/windows |
-| `client.mode` | string | 模式：`companion` / `operator` / `node` |
-| `caps` | string[] | 请求的能力，`tool-events` 表示接收工具事件 |
-| `auth.token` | string | 配对令牌 |
+| 字段                 | 类型     | 说明                                       |
+| -------------------- | -------- | ------------------------------------------ |
+| `minProtocol`        | number   | 最低支持的协议版本，设 1                   |
+| `maxProtocol`        | number   | 最高支持的协议版本，设 1                   |
+| `client.id`          | string   | 客户端唯一标识                             |
+| `client.displayName` | string   | 显示名称（可选）                           |
+| `client.version`     | string   | 客户端版本号                               |
+| `client.platform`    | string   | 平台，web/macos/linux/windows              |
+| `client.mode`        | string   | 模式：`companion` / `operator` / `node`    |
+| `caps`               | string[] | 请求的能力，`tool-events` 表示接收工具事件 |
+| `auth.token`         | string   | 配对令牌                                   |
 
 ### 3. Gateway 返回
 
 成功：
+
 ```json
 {
   "type": "res",
@@ -122,20 +124,20 @@ type GatewayEventFrame = {
 
 ```typescript
 type AgentEventPayload = {
-  runId: string;        // Agent 运行实例 ID
-  seq: number;          // 单调递增的序列号（每个 runId 独立计数）
+  runId: string; // Agent 运行实例 ID
+  seq: number; // 单调递增的序列号（每个 runId 独立计数）
   stream: AgentEventStream; // 事件类型
-  ts: number;           // 时间戳（毫秒）
+  ts: number; // 时间戳（毫秒）
   data: Record<string, unknown>; // 事件数据
-  sessionKey?: string;  // 关联的会话
+  sessionKey?: string; // 关联的会话
 };
 
 type AgentEventStream =
-  | "lifecycle"    // 生命周期事件（start/end/error）
-  | "tool"         // 工具调用事件
-  | "assistant"    // 文本输出事件
-  | "error"        // 错误事件
-  | string;        // 扩展类型
+  | "lifecycle" // 生命周期事件（start/end/error）
+  | "tool" // 工具调用事件
+  | "assistant" // 文本输出事件
+  | "error" // 错误事件
+  | string; // 扩展类型
 ```
 
 ### Lifecycle Stream
@@ -234,14 +236,13 @@ type SpawnSubagentResult = {
 ```typescript
 // 来自 src/agents/subagent-lifecycle-events.ts
 type SubagentLifecycleEndedReason =
-  | "subagent-complete"  // 正常完成
-  | "subagent-error"     // 出错
-  | "subagent-killed"    // 被终止
-  | "session-reset"      // 会话重置
-  | "session-delete";    // 会话删除
+  | "subagent-complete" // 正常完成
+  | "subagent-error" // 出错
+  | "subagent-killed" // 被终止
+  | "session-reset" // 会话重置
+  | "session-delete"; // 会话删除
 
-type SubagentLifecycleEndedOutcome =
-  | "ok" | "error" | "timeout" | "killed" | "reset" | "deleted";
+type SubagentLifecycleEndedOutcome = "ok" | "error" | "timeout" | "killed" | "reset" | "deleted";
 ```
 
 ### 运行记录
@@ -266,11 +267,11 @@ type SubagentRunRecord = {
 
 ### Plugin Hooks（Gateway 端）
 
-| Hook | 触发时机 |
-|------|---------|
+| Hook                | 触发时机           |
+| ------------------- | ------------------ |
 | `subagent_spawning` | Sub-Agent 即将生成 |
-| `subagent_spawned` | Sub-Agent 已生成 |
-| `subagent_ended` | Sub-Agent 运行结束 |
+| `subagent_spawned`  | Sub-Agent 已生成   |
+| `subagent_ended`    | Sub-Agent 运行结束 |
 
 **注意：** 这些 hook 在 Gateway 进程内触发。是否通过 WebSocket 广播到客户端，需要确认 Gateway 的实际行为。如未广播，前端需通过 RPC 轮询 `sessions.list` 来检测 Sub-Agent 状态变化。
 
@@ -278,32 +279,32 @@ type SubagentRunRecord = {
 
 ## 五、可用 RPC 方法
 
-| 方法 | 参数 | 返回 | 说明 |
-|------|------|------|------|
-| `connect` | `ConnectParams` | `{ protocol, connId }` | 认证连接 |
-| `agents.list` | `{}` | `AgentConfig[]` | Agent 配置列表 |
-| `sessions.list` | `{ agentId? }` | `SessionPreview[]` | 会话列表 |
-| `sessions.preview` | `{ sessionKey }` | `SessionDetail` | 会话详情 |
-| `sessions.usage` | `{ sessionKey }` | `UsageData` | 会话用量 |
-| `usage.status` | `{}` | `UsageStatus` | 全局用量统计 |
-| `usage.cost` | `{}` | `CostData` | 成本统计 |
-| `tools.catalog` | `{}` | `ToolDef[]` | 工具目录 |
-| `health` | `{}` | `HealthSnapshot` | 系统健康 |
-| `models.list` | `{}` | `ModelInfo[]` | 可用模型列表 |
+| 方法               | 参数             | 返回                   | 说明           |
+| ------------------ | ---------------- | ---------------------- | -------------- |
+| `connect`          | `ConnectParams`  | `{ protocol, connId }` | 认证连接       |
+| `agents.list`      | `{}`             | `AgentConfig[]`        | Agent 配置列表 |
+| `sessions.list`    | `{ agentId? }`   | `SessionPreview[]`     | 会话列表       |
+| `sessions.preview` | `{ sessionKey }` | `SessionDetail`        | 会话详情       |
+| `sessions.usage`   | `{ sessionKey }` | `UsageData`            | 会话用量       |
+| `usage.status`     | `{}`             | `UsageStatus`          | 全局用量统计   |
+| `usage.cost`       | `{}`             | `CostData`             | 成本统计       |
+| `tools.catalog`    | `{}`             | `ToolDef[]`            | 工具目录       |
+| `health`           | `{}`             | `HealthSnapshot`       | 系统健康       |
+| `models.list`      | `{}`             | `ModelInfo[]`          | 可用模型列表   |
 
 ---
 
 ## 六、广播事件列表
 
-| 事件 | Payload | 说明 |
-|------|---------|------|
-| `connect.challenge` | `{ nonce }` | 认证挑战 |
-| `agent` | `AgentEventPayload` | Agent 生命周期/工具/文本/错误 |
-| `chat` | 消息数据 | 聊天消息 |
-| `presence` | 在线列表 | 连接的客户端/设备 |
-| `health` | 健康快照 | 系统健康 |
-| `heartbeat` | 心跳数据 | 定期心跳 |
-| `tick` | 维护数据 | 维护计时器 |
-| `cron` | 任务数据 | 定时任务事件 |
-| `shutdown` | `{ reason }` | Gateway 关闭 |
-| `update.available` | 版本信息 | 可用更新 |
+| 事件                | Payload             | 说明                          |
+| ------------------- | ------------------- | ----------------------------- |
+| `connect.challenge` | `{ nonce }`         | 认证挑战                      |
+| `agent`             | `AgentEventPayload` | Agent 生命周期/工具/文本/错误 |
+| `chat`              | 消息数据            | 聊天消息                      |
+| `presence`          | 在线列表            | 连接的客户端/设备             |
+| `health`            | 健康快照            | 系统健康                      |
+| `heartbeat`         | 心跳数据            | 定期心跳                      |
+| `tick`              | 维护数据            | 维护计时器                    |
+| `cron`              | 任务数据            | 定时任务事件                  |
+| `shutdown`          | `{ reason }`        | Gateway 关闭                  |
+| `update.available`  | 版本信息            | 可用更新                      |

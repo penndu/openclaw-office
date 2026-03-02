@@ -36,6 +36,6 @@
 - [x] 7.1 pnpm test 通过（22 files, 114 tests）
 - [x] 7.2 pnpm typecheck 无类型错误
 - [x] 7.3 pnpm check lint + format 通过
-- [x] 7.4 pnpm build 构建成功，Three.js 独立 chunk（Scene3D-*.js 1015kB）
+- [x] 7.4 pnpm build 构建成功，Three.js 独立 chunk（Scene3D-\*.js 1015kB）
 - [x] 7.5 全流程浏览器验证通过：2D/3D 视图、日/夜主题、Bloom、SVG 头像、MetricsPanel Tab、ActionBar、右键菜单
 - [x] 7.6 帧率验证在常规 Agent 数量下满足要求

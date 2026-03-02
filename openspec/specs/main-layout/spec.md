@@ -1,8 +1,11 @@
 # main-layout Specification
 
 ## Purpose
+
 TBD - created by archiving change clawx-phase-a-architecture. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: ConsoleLayout 管控页面布局
 
 系统 SHALL 提供 `ConsoleLayout` 布局组件，用于管控页面（Dashboard/Channels/Skills/Cron/Settings）的统一布局。
@@ -69,4 +72,3 @@ TBD - created by archiving change clawx-phase-a-architecture. Update Purpose aft
 
 - **WHEN** 用户导航到 `/settings`
 - **THEN** 系统 SHALL 渲染 Settings 骨架页面，包含页面标题 "Settings"、功能描述文本和空态提示
-

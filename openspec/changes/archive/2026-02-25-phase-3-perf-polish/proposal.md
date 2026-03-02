@@ -14,12 +14,14 @@ Phase 3 前三个 Milestone 增加了后处理特效、Force Action 交互、监
 ## Capabilities
 
 ### New Capabilities
+
 - `instanced-rendering`: InstancedMesh 批量渲染优化（Agent > 20 时自动启用）
 - `lod-system`: 基于相机距离的多级渲染精度切换
 - `responsive-layout`: 小屏幕响应式适配（自动 2D + 底部抽屉布局）
 - `e2e-tests`: 关键流程 E2E 测试集
 
 ### Modified Capabilities
+
 - `panel-system`: 图表组件懒加载优化
 
 ## Impact

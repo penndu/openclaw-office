@@ -1,8 +1,11 @@
 # testing Specification
 
 ## Purpose
+
 TBD - created by archiving change phase-1-foundation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: 测试基础设施配置
 
 系统 SHALL 配置完整的测试环境，支持单元测试和组件测试。
@@ -87,4 +90,3 @@ TBD - created by archiving change phase-1-foundation. Update Purpose after archi
 
 - **WHEN** 运行 position-allocator 测试套件
 - **THEN** SHALL 验证：同一 agentId 分配相同位置（确定性）、不同 agentId 不会分配到相同位置（无碰撞）、溢出时分配到 Hot Desk Zone
-

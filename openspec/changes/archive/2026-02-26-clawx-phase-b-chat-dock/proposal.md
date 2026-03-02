@@ -16,12 +16,14 @@ Phase A 已完成架构底座（路由系统、Gateway Adapter 接口层、Conso
 ## Capabilities
 
 ### New Capabilities
+
 - `chat-dock-bar`: 底部固定输入条组件——默认显示，默认 main Agent 对话，支持 Agent 选择器切换目标 Agent，消息输入、发送/停止控制、输入交互（Enter 发送/Shift+Enter 换行/IME 防误发）
 - `chat-timeline`: 消息时间线抽屉组件——消息流渲染、Markdown 格式化、thinking 折叠、tool_use 卡片、streaming 实时展示、图片预览
 - `chat-message-utils`: 消息处理工具库——streaming delta 合并、Markdown 解析、tool_result 图片挂载、消息类型判断
 - `chat-dock-store-impl`: Chat Dock 完整 store 实现——消息 CRUD、streaming 生命周期管理、会话切换、乐观更新、错误处理
 
 ### Modified Capabilities
+
 - `gateway-adapter`: MockAdapter 的 chat 相关方法需实现模拟 streaming 响应，支持多步骤事件发射（thinking → tool_use → text delta → final）
 - `office-store`: 需增加 chatDockHeight 持久化状态和 Dock 展开/收起与 Office 布局的联动逻辑
 

@@ -17,6 +17,7 @@ OpenClaw Office 当前是单页面应用，仅有 2D/3D 办公室视图和右侧
 ## Capabilities
 
 ### New Capabilities
+
 - `console-routing`: 前端路由系统与页面导航能力——React Router 集成、路由定义、TopBar「控制台」菜单入口、页面切换与 URL 同步
 - `main-layout`: 全局布局框架——Office 全屏模式与管控页面 Sidebar 模式的统一布局切换
 - `gateway-adapter`: Gateway 通信适配层——统一 RPC/Event 接口定义，mock 与真实 WebSocket 两种 provider 实现，使前端脱离 Electron 可独立运行
@@ -24,6 +25,7 @@ OpenClaw Office 当前是单页面应用，仅有 2D/3D 办公室视图和右侧
 - `domain-mapping`: 领域模型映射层——将 Gateway 原始 payload 转换为 UI ViewModel，页面禁止直接消费原始数据
 
 ### Modified Capabilities
+
 - `gateway-connection`: 现有 ws-client 需适配新的 Adapter 接口，将 WebSocket 通信能力包装为 Adapter 的 gateway 实现
 - `office-store`: 需增加 `currentPage` 状态字段用于追踪当前活动页面（Office / 管控页面），并与路由状态同步
 

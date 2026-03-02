@@ -1,6 +1,6 @@
+import { X, Copy, Check, Terminal, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Copy, Check, Terminal, ShieldAlert } from "lucide-react";
 
 interface ClawHubInstallDialogProps {
   open: boolean;
@@ -10,7 +10,13 @@ interface ClawHubInstallDialogProps {
   onConfirmDone: () => void;
 }
 
-export function ClawHubInstallDialog({ open, slug, displayName, onClose, onConfirmDone }: ClawHubInstallDialogProps) {
+export function ClawHubInstallDialog({
+  open,
+  slug,
+  displayName,
+  onClose,
+  onConfirmDone,
+}: ClawHubInstallDialogProps) {
   const { t } = useTranslation("console");
   const [copied, setCopied] = useState(false);
 
@@ -25,7 +31,10 @@ export function ClawHubInstallDialog({ open, slug, displayName, onClose, onConfi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="relative mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}

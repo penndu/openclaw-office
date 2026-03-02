@@ -1,8 +1,11 @@
 # console-stores Specification
 
 ## Purpose
+
 TBD - created by archiving change clawx-phase-a-architecture. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Dashboard Store 骨架
 
 系统 SHALL 创建 `dashboard-store.ts`，管理 Dashboard 页面的状态。
@@ -95,4 +98,3 @@ TBD - created by archiving change clawx-phase-a-architecture. Update Purpose aft
 
 - **WHEN** Phase A 实施完成
 - **THEN** `src/store/console-stores/` 目录下 SHALL 包含：`dashboard-store.ts`、`channels-store.ts`、`skills-store.ts`、`cron-store.ts`、`settings-store.ts`、`chat-dock-store.ts`
-

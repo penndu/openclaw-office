@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  useToastStore,
-  toastSuccess,
-  toastError,
-  toastWarning,
-  toastInfo,
-} from "../toast-store";
+import { useToastStore, toastSuccess, toastError, toastWarning, toastInfo } from "../toast-store";
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] });

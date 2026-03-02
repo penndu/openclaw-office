@@ -1,8 +1,11 @@
 # panel-system Specification
 
 ## Purpose
+
 TBD - created by archiving change phase-1-foundation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: AppShell 布局
 
 系统 SHALL 提供包含顶栏、侧栏和主区域的响应式布局。
@@ -106,4 +109,3 @@ TBD - created by archiving change phase-1-foundation. Update Purpose after archi
 
 - **WHEN** 同一 agentId 在不同位置（列表、详情、平面图 tooltip）渲染 Avatar
 - **THEN** 所有位置 SHALL 显示相同的颜色和首字母
-

@@ -7,10 +7,12 @@
 API 基础地址 SHALL 默认为 `https://clawhub.ai`，可通过 `VITE_CLAWHUB_REGISTRY` 环境变量覆盖。
 
 #### Scenario: 默认 registry URL
+
 - **WHEN** 未设置 `VITE_CLAWHUB_REGISTRY`
 - **THEN** 使用 `https://clawhub.ai` 作为 API 基础地址
 
 #### Scenario: 自定义 registry URL
+
 - **WHEN** 设置 `VITE_CLAWHUB_REGISTRY=https://custom-registry.example.com`
 - **THEN** 使用该自定义地址
 
@@ -19,6 +21,7 @@ API 基础地址 SHALL 默认为 `https://clawhub.ai`，可通过 `VITE_CLAWHUB_
 `clawhubSearch(query: string, limit?: number)` SHALL 调用 `GET /api/v1/search` 端点，返回语义搜索结果。
 
 返回类型 `ClawHubSearchResult[]`：
+
 ```typescript
 interface ClawHubSearchResult {
   score: number;
@@ -31,15 +34,18 @@ interface ClawHubSearchResult {
 ```
 
 #### Scenario: 搜索 pptx 相关 skills
+
 - **WHEN** 调用 `clawhubSearch("pptx", 10)`
 - **THEN** 返回最多 10 个结果，每个包含 `slug`、`displayName`、`score`
 - **THEN** 结果按 `score` 降序排列
 
 #### Scenario: 搜索无结果
+
 - **WHEN** 搜索词无匹配
 - **THEN** 返回空数组 `[]`
 
 #### Scenario: API 错误处理
+
 - **WHEN** ClawHub API 返回非 200 状态码或网络错误
 - **THEN** 抛出 `ClawHubError`，包含 `code` 和 `message`
 
@@ -48,6 +54,7 @@ interface ClawHubSearchResult {
 `clawhubExplore(options?: { limit?: number; cursor?: string })` SHALL 调用 `GET /api/v1/skills` 端点，返回最新 skills 列表。
 
 返回类型 `ClawHubExploreResponse`：
+
 ```typescript
 interface ClawHubSkillListItem {
   slug: string;
@@ -77,11 +84,13 @@ interface ClawHubExploreResponse {
 ```
 
 #### Scenario: 浏览最新 skills
+
 - **WHEN** 调用 `clawhubExplore({ limit: 20 })`
 - **THEN** 返回最多 20 个 skills，按更新时间倒序
 - **THEN** 如有更多页，返回 `nextCursor` 非 null
 
 #### Scenario: 分页加载
+
 - **WHEN** 用上一次返回的 `nextCursor` 调用 `clawhubExplore({ cursor: "xxx" })`
 - **THEN** 返回下一页数据
 
@@ -90,6 +99,7 @@ interface ClawHubExploreResponse {
 `clawhubSkillDetail(slug: string)` SHALL 调用 `GET /api/v1/skills/:slug` 端点，返回 skill 完整信息。
 
 返回类型 `ClawHubSkillDetail`：
+
 ```typescript
 interface ClawHubSkillDetail {
   skill: {
@@ -115,10 +125,12 @@ interface ClawHubSkillDetail {
 ```
 
 #### Scenario: 获取 powerpoint-pptx 详情
+
 - **WHEN** 调用 `clawhubSkillDetail("powerpoint-pptx")`
 - **THEN** 返回包含 owner（handle、avatar）、stats（downloads、stars）、latestVersion 的完整信息
 
 #### Scenario: 不存在的 skill
+
 - **WHEN** 调用 `clawhubSkillDetail("nonexistent-slug")`
 - **THEN** 返回 `skill: null`
 
@@ -132,10 +144,12 @@ interface ClawHubSkillDetail {
 4. 遇到 Rate Limit 错误时 SHALL 向用户展示友好提示
 
 #### Scenario: 搜索 debounce
+
 - **WHEN** 用户快速输入 "p", "pp", "ppt", "pptx"
 - **THEN** 仅在输入稳定 300ms 后发起一次搜索请求
 
 #### Scenario: Rate Limit 处理
+
 - **WHEN** ClawHub API 返回 Rate Limit 错误
 - **THEN** 展示 "搜索服务繁忙，请稍后重试" 提示
 - **THEN** 自动在 5 秒后允许重试

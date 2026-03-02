@@ -1,8 +1,11 @@
 # console-routing Specification
 
 ## Purpose
+
 TBD - created by archiving change clawx-phase-a-architecture. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: React Router 路由系统
 
 系统 SHALL 使用 `react-router-dom` 的 `HashRouter` 建立前端路由系统，支持 Office（主页）与管控页面的 URL 路由切换。
@@ -88,4 +91,3 @@ TBD - created by archiving change clawx-phase-a-architecture. Update Purpose aft
 
 - **WHEN** 用户从管控页面返回 Office 视图
 - **THEN** Office 视图 SHALL 正常渲染，Agent 状态 SHALL 保持路由切换前的状态
-

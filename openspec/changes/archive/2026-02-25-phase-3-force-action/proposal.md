@@ -13,6 +13,7 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `agent-context-menu`: Agent 右键/点击上下文菜单，提供操作入口列表
 - `force-action-dialog`: Force Action 操作弹窗（Send Message / Kill 确认），含 Agent 信息展示
 - `force-action-rpc`: 通过 Gateway RPC 执行 Agent 干预操作（pause/resume/kill/send-message）

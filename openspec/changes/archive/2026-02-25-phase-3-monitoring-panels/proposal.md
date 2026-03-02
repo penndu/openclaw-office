@@ -13,6 +13,7 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `token-line-chart`: Token 消耗实时折线图（30 分钟窗口，1 分钟粒度，多 Agent 分线）
 - `network-graph`: Agent 协作关系力导向拓扑图
 - `activity-heatmap`: Agent 活跃度热力图（24 小时 × Agent 矩阵）
@@ -20,6 +21,7 @@
 - `usage-data-pipeline`: 周期性 RPC 轮询 usage.status/usage.cost 并写入 store
 
 ### Modified Capabilities
+
 - `office-store`: 新增 tokenHistory、agentCosts、activityData 等数据字段
 - `panel-system`: MetricsPanel 增加图表 Tab 切换
 

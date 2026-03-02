@@ -1,8 +1,11 @@
 # event-processing Specification
 
 ## Purpose
+
 TBD - created by archiving change phase-1-foundation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Agent 事件解析
 
 系统 SHALL 将 Gateway 广播的 Agent 事件帧解析为结构化的 AgentEventPayload，并推断对应的可视化状态。
@@ -84,4 +87,3 @@ TBD - created by archiving change phase-1-foundation. Update Purpose after archi
 
 - **WHEN** 收到未知 runId 的 lifecycle start 事件
 - **THEN** 系统 SHALL 创建新的 runId 映射，如果 sessionKey 匹配已知 Agent 则关联，否则创建临时 VisualAgent
-

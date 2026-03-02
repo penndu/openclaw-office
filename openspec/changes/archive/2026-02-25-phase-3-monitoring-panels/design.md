@@ -7,6 +7,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 打通 `usage.status` RPC 数据链路，让 totalTokens/tokenRate 从真实数据填充
 - 实现 Token 消耗折线图（30 分钟窗口，最多 30 个数据点，多 Agent 线条）
 - 实现 Agent 协作拓扑图（基于 store.links，简单的力导向 SVG 布局）
@@ -14,6 +15,7 @@
 - 实现成本饼图（基于 `usage.cost` RPC 或本地 token 聚合）
 
 **Non-Goals:**
+
 - 不引入 d3-force 全库（使用简化的弹簧布局算法或静态圆形布局）
 - 不做图表导出/截图功能
 - 不做自定义时间范围选择（固定 30 分钟窗口）
@@ -25,6 +27,7 @@
 **选择**: 新建 `useUsagePoller` hook，每 60 秒调用 `usage.status` RPC。
 
 **做法**:
+
 - 返回 `{ tokens: { input, output, total }, byAgent: Record<agentId, { input, output }> }`
 - 将每次返回写入 store 的 `tokenHistory` 环形缓冲区（最多 30 条记录，1 分钟间隔）
 - `usage.cost` 用于成本饼图，同样 60 秒轮询
@@ -36,10 +39,12 @@
 **选择**: 不引入 d3-force 完整库，使用简化的圆形布局 + Recharts 无法实现力导向图，改用纯 SVG。
 
 **替代方案**:
+
 - d3-force → 依赖体积大，且复杂度高
 - @nivo/network → 新增依赖
 
 **做法**:
+
 - 使用纯 React + SVG 实现
 - Agent 节点均匀分布在圆形上（圆形布局），节点大小反映 toolCallCount
 - 边（协作连线）连接有 CollaborationLink 的节点对，线宽 = strength × 3
@@ -52,6 +57,7 @@
 **选择**: 从 store.eventHistory 聚合每 Agent 每小时的事件数。
 
 **做法**:
+
 - 行 = 活跃 Agent（最多 10 个）
 - 列 = 最近 24 小时（每小时一格，最多 24 列）
 - 格子颜色: 0 事件=浅灰, 1-5=浅绿, 5-10=中绿, 10+=深绿
@@ -63,6 +69,7 @@
 **选择**: 在现有 4 卡片下方增加 Tab 切换区域，Tab 包含: 概览(Overview) | 趋势(Trends) | 拓扑(Network) | 活跃(Activity)。
 
 **做法**:
+
 - Overview tab: 成本饼图 + 现有 4 卡片
 - Trends tab: Token 消耗折线图
 - Network tab: Agent 关系拓扑图

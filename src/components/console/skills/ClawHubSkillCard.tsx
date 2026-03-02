@@ -1,5 +1,5 @@
-import { useTranslation } from "react-i18next";
 import { Download, CheckCircle, Clock, Star, TrendingUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { ClawHubSearchResult, ClawHubSkillListItem } from "@/gateway/clawhub-client";
 
 interface ClawHubSkillCardProps {
@@ -9,7 +9,9 @@ interface ClawHubSkillCardProps {
   onOpenDetail: (slug: string) => void;
 }
 
-function isSearchResult(item: ClawHubSearchResult | ClawHubSkillListItem): item is ClawHubSearchResult {
+function isSearchResult(
+  item: ClawHubSearchResult | ClawHubSkillListItem,
+): item is ClawHubSearchResult {
   return "score" in item;
 }
 
@@ -25,7 +27,12 @@ function formatRelativeTime(ts: number): string {
   return `${months}mo ago`;
 }
 
-export function ClawHubSkillCard({ item, isInstalled, onInstall, onOpenDetail }: ClawHubSkillCardProps) {
+export function ClawHubSkillCard({
+  item,
+  isInstalled,
+  onInstall,
+  onOpenDetail,
+}: ClawHubSkillCardProps) {
   const { t } = useTranslation("console");
   const slug = item.slug;
   const displayName = item.displayName;
@@ -37,9 +44,7 @@ export function ClawHubSkillCard({ item, isInstalled, onInstall, onOpenDetail }:
   const stats = !isSearchResult(item) ? item.stats : null;
 
   return (
-    <div
-      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800/80 dark:hover:border-blue-600"
-    >
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800/80 dark:hover:border-blue-600">
       <button
         type="button"
         onClick={() => onOpenDetail(slug)}
@@ -67,7 +72,10 @@ export function ClawHubSkillCard({ item, isInstalled, onInstall, onOpenDetail }:
             ) : (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onInstall(slug, displayName); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onInstall(slug, displayName);
+                }}
                 className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
               >
                 <Download className="h-3 w-3" />
@@ -78,11 +86,7 @@ export function ClawHubSkillCard({ item, isInstalled, onInstall, onOpenDetail }:
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-          {version && (
-            <span className="flex items-center gap-1">
-              v{version}
-            </span>
-          )}
+          {version && <span className="flex items-center gap-1">v{version}</span>}
           {updatedAt && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />

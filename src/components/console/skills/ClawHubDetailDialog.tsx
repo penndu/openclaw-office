@@ -1,6 +1,6 @@
+import { X, Download, Star, User, ExternalLink, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Download, Star, User, ExternalLink, Loader2 } from "lucide-react";
 import { useClawHubStore } from "@/store/console-stores/clawhub-store";
 
 interface ClawHubDetailDialogProps {
@@ -10,7 +10,12 @@ interface ClawHubDetailDialogProps {
   isInstalled: boolean;
 }
 
-export function ClawHubDetailDialog({ slug, onClose, onInstall, isInstalled }: ClawHubDetailDialogProps) {
+export function ClawHubDetailDialog({
+  slug,
+  onClose,
+  onInstall,
+  isInstalled,
+}: ClawHubDetailDialogProps) {
   const { t } = useTranslation("console");
   const fetchDetail = useClawHubStore((s) => s.fetchDetail);
   const detail = useClawHubStore((s) => s.selectedDetail);
@@ -19,7 +24,9 @@ export function ClawHubDetailDialog({ slug, onClose, onInstall, isInstalled }: C
 
   useEffect(() => {
     if (slug) fetchDetail(slug);
-    return () => { clearDetail(); };
+    return () => {
+      clearDetail();
+    };
   }, [slug, fetchDetail, clearDetail]);
 
   if (!slug) return null;
@@ -29,7 +36,10 @@ export function ClawHubDetailDialog({ slug, onClose, onInstall, isInstalled }: C
   const owner = detail?.owner;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="relative mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
         onClick={(e) => e.stopPropagation()}

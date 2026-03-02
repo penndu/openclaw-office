@@ -12,9 +12,11 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `anthropomorphic-2d`: 新增拟人化的2D元素显示规范和组件实现。
 
 ### Modified Capabilities
+
 - `floor-plan-2d`: 优化现有2D平面图的视觉呈现和交互反馈。
 
 ## Impact

@@ -5,6 +5,7 @@ OpenClaw Office 的 Console Skills 页面目前存在两个层面的功能缺失
 ### 层面一：ClawHub Marketplace 搜索与安装完全缺失
 
 OpenClaw 的 Skills 生态由 **ClawHub** (`clawhub.ai`) 提供注册中心服务。ClawHub 拥有完整的 REST API：
+
 - `GET /api/v1/search?q=xxx&limit=N` — 向量语义搜索 skills
 - `GET /api/v1/skills?limit=N&cursor=xxx` — 浏览最新 skills
 - `GET /api/v1/skills/:slug` — 获取 skill 详情（含作者、stats、版本历史）
@@ -20,16 +21,17 @@ Gateway 的 `skills.install` RPC（安装 skill 的**系统依赖**如 brew/npm/
 
 ### 两个概念的区分
 
-| 操作 | 含义 | 机制 |
-|------|------|------|
-| ClawHub install | 从 ClawHub 下载 skill 定义（SKILL.md + 辅助文件） | HTTP 下载 zip → 解压到 workspace/skills/ |
-| Gateway skills.install | 安装 skill 所需的系统依赖（brew/npm/go/uv 二进制） | RPC → Gateway 执行 shell 命令 |
+| 操作                   | 含义                                               | 机制                                     |
+| ---------------------- | -------------------------------------------------- | ---------------------------------------- |
+| ClawHub install        | 从 ClawHub 下载 skill 定义（SKILL.md + 辅助文件）  | HTTP 下载 zip → 解压到 workspace/skills/ |
+| Gateway skills.install | 安装 skill 所需的系统依赖（brew/npm/go/uv 二进制） | RPC → Gateway 执行 shell 命令            |
 
 两者是**互补**关系：先从 ClawHub install 下载 skill 定义，然后可能需要 Gateway skills.install 来安装该 skill 声明的系统依赖。
 
 ### 实际验证
 
 已在本机通过 ClawHub CLI 成功搜索并安装了 `powerpoint-pptx` skill：
+
 ```
 clawhub search pptx → 找到 10 个结果
 clawhub install powerpoint-pptx → 安装到 ~/.openclaw/workspace/skills/powerpoint-pptx/
@@ -39,17 +41,20 @@ openclaw skills list → 已显示为 "ready" 状态
 ## What Changes
 
 ### Phase 1: ClawHub Marketplace 集成（核心）
+
 - **ClawHub API 客户端**：在前端新增 ClawHub REST API 调用层，支持搜索、浏览、获取详情、下载安装
 - **Marketplace 搜索功能**：Marketplace Tab 从"本地过滤"升级为"ClawHub 向量语义搜索"，搜索按钮真正发起远程请求
 - **ClawHub Skill 安装**：Marketplace 中可一键安装 ClawHub 上的 skill（下载 zip → 通知 Gateway 刷新）
 - **Skill 详情页增强**：展示 ClawHub 元数据（作者、下载量、星标数、版本历史、changelog）
 
 ### Phase 2: 操作反馈完善
+
 - **Toast 通知系统**：统一的操作反馈组件
 - **安装结果详情**：`skills.install`（系统依赖安装）的 stdout/stderr/warnings 展示
 - **Gateway 重启追踪**：配置修改后的重启状态横幅
 
 ### Phase 3: 后续扩展（不在本次范围）
+
 - ClawHub skill 卸载（`clawhub uninstall`）
 - Skill 更新检查与升级（`clawhub update`）
 - 用户登录/Star/发布等社交功能
@@ -57,6 +62,7 @@ openclaw skills list → 已显示为 "ready" 状态
 ## Capabilities
 
 ### New Capabilities
+
 - `clawhub-client`: ClawHub REST API 客户端，封装搜索/浏览/详情/下载/安装的 HTTP 调用
 - `clawhub-marketplace`: Marketplace Tab 全面升级为 ClawHub 驱动的远程搜索与安装体验
 - `toast-notification`: 全局 Toast 通知系统
@@ -64,6 +70,7 @@ openclaw skills list → 已显示为 "ready" 状态
 - `command-result-detail`: Gateway 命令执行结果详情展示组件
 
 ### Modified Capabilities
+
 - `skills-page`: Marketplace Tab 从本地过滤升级为 ClawHub 远程搜索；安装操作增加反馈
 - `gateway-adapter`: `skillsInstall` 返回类型扩展；新增 ClawHub 相关的状态刷新
 

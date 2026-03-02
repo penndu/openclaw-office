@@ -1,6 +1,6 @@
+import { Loader2, CheckCircle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, CheckCircle, RefreshCw } from "lucide-react";
 import { useConfigStore } from "@/store/console-stores/config-store";
 
 export function RestartBanner() {
@@ -14,7 +14,10 @@ export function RestartBanner() {
       setCountdown(null);
       return;
     }
-    const remaining = Math.max(0, restartState.estimatedDelayMs - (Date.now() - restartState.startedAt));
+    const remaining = Math.max(
+      0,
+      restartState.estimatedDelayMs - (Date.now() - restartState.startedAt),
+    );
     setCountdown(Math.ceil(remaining / 1000));
 
     const interval = setInterval(() => {
@@ -34,10 +37,30 @@ export function RestartBanner() {
   if (!restartState) return null;
 
   const statusConfig = {
-    pending: { icon: RefreshCw, text: t("restart.pending", { seconds: countdown ?? 0 }), color: "bg-yellow-500", animate: "" },
-    disconnected: { icon: Loader2, text: t("restart.disconnected"), color: "bg-orange-500", animate: "animate-spin" },
-    reconnecting: { icon: Loader2, text: t("restart.reconnecting"), color: "bg-blue-500", animate: "animate-spin" },
-    complete: { icon: CheckCircle, text: t("restart.complete"), color: "bg-green-500", animate: "" },
+    pending: {
+      icon: RefreshCw,
+      text: t("restart.pending", { seconds: countdown ?? 0 }),
+      color: "bg-yellow-500",
+      animate: "",
+    },
+    disconnected: {
+      icon: Loader2,
+      text: t("restart.disconnected"),
+      color: "bg-orange-500",
+      animate: "animate-spin",
+    },
+    reconnecting: {
+      icon: Loader2,
+      text: t("restart.reconnecting"),
+      color: "bg-blue-500",
+      animate: "animate-spin",
+    },
+    complete: {
+      icon: CheckCircle,
+      text: t("restart.complete"),
+      color: "bg-green-500",
+      animate: "",
+    },
   };
 
   const cfg = statusConfig[restartState.status];

@@ -23,6 +23,7 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `flat-office-furniture`: 扁平化等距家具 SVG 组件系统——桌子、椅子、圆桌、沙发、绿植等可复用 SVG 组件
 - `rich-agent-avatar`: 增强版 Agent 头像组件——圆形头像 + 名称标签 + 状态色环 + 动画效果，替换现有 AgentDot
 - `dynamic-zone-layout`: 动态区域布局系统——根据 Agent 数量自适应调整区域大小和工位排列

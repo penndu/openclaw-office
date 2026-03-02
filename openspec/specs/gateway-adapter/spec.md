@@ -1,8 +1,11 @@
 # gateway-adapter Specification
 
 ## Purpose
+
 TBD - created by archiving change clawx-phase-a-architecture. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: GatewayAdapter 统一接口
 
 系统 SHALL 定义 `GatewayAdapter` TypeScript 接口，包含与 OpenClaw Gateway 方法一一对应的类型安全方法签名。
@@ -72,4 +75,3 @@ TBD - created by archiving change clawx-phase-a-architecture. Update Purpose aft
 
 - **WHEN** 环境变量 `VITE_MOCK` 未设置或为 `"false"`
 - **THEN** `getAdapter()` SHALL 返回 WsAdapter 实例
-

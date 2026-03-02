@@ -1,8 +1,11 @@
 # domain-mapping Specification
 
 ## Purpose
+
 TBD - created by archiving change clawx-phase-a-architecture. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: ViewModel 类型定义
 
 系统 SHALL 在 `src/lib/view-models.ts` 中定义管控页面使用的 ViewModel TypeScript 类型，页面组件 SHALL 仅消费 ViewModel 而非 Gateway 原始 payload。
@@ -35,4 +38,3 @@ TBD - created by archiving change clawx-phase-a-architecture. Update Purpose aft
 
 - **WHEN** Phase A 实施完成
 - **THEN** 转换函数 SHALL 至少定义类型签名。对于已知的字段映射（如 status → statusLabel/statusColor）SHALL 提供初步实现；复杂的业务转换逻辑 SHALL 在后续 Phase 填充
-

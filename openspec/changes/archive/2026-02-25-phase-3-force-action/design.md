@@ -7,6 +7,7 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 实现完整的 Agent 右键上下文菜单 UI
 - 实现 ForceActionDialog 弹窗（Send Message 输入 + Kill 确认）
 - 封装 Force Action RPC 调用层，即使后端暂未实现也能完整演示 UI 流程
@@ -14,6 +15,7 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 - 升级 ActionBar 从占位到真实功能
 
 **Non-Goals:**
+
 - 不实现 Gateway 后端的 Force Action 处理逻辑（后端已有或待后续实现）
 - 不实现 Spawn Sub-Agent 的完整创建流程（仅预留入口，实际创建需要更多参数设计）
 - 不实现角色级别的权限矩阵（仅做 operator scope 的二元检查）
@@ -25,10 +27,12 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 **选择**: 使用 React Portal 渲染上下文菜单到 document.body，通过鼠标事件坐标定位。
 
 **替代方案**:
+
 - drei `<Html>` 在 3D 空间中渲染 → 位置跟随相机旋转不稳定，点击区域判定复杂
 - 原生 contextmenu 事件 → 浏览器默认菜单干扰
 
 **做法**:
+
 - 3D 模式: AgentCharacter 的 `onContextMenu` 获取鼠标坐标，传递给 store 的 `openContextMenu(agentId, {x, y})`
 - 2D 模式: AgentDot 同理
 - `AgentContextMenu.tsx` 作为 Portal 组件，根据 store 中的 contextMenu 状态渲染到 body
@@ -39,6 +43,7 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 **选择**: 自建轻量级 Dialog 组件，使用 Tailwind 样式。
 
 **做法**:
+
 - 弹窗包含: Agent 头像+名称、操作类型标题、内容区（Send Message 为 textarea + 发送按钮，Kill 为确认文案 + 确认/取消按钮）
 - 操作发送后显示 loading 状态，收到 RPC 响应后关闭弹窗
 - RPC 超时（5s）或错误时显示 toast 提示
@@ -48,6 +53,7 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 **选择**: 新建 `src/gateway/force-action-rpc.ts` 封装各 Force Action RPC 调用。
 
 **做法**:
+
 - 定义 RPC 方法接口:
   - `agent.pause(agentId)` — 暂停
   - `agent.resume(agentId)` — 恢复
@@ -61,6 +67,7 @@ Phase 2 的 ActionBar 已渲染了"暂停 / 派生子Agent / 对话"三个按钮
 **选择**: 连接成功后从 HelloOk 响应中提取 scopes，存入 store。
 
 **做法**:
+
 - `office-store` 新增 `operatorScopes: string[]`
 - 连接成功时从 snapshot/scopes 中解析
 - `hasOperatorPermission()` 选择器检查是否包含 "operator"

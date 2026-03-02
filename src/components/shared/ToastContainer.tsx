@@ -1,6 +1,14 @@
+import {
+  X,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { useToastStore, type ToastItem, type ToastType } from "@/store/toast-store";
 
 const ICON_MAP: Record<ToastType, typeof CheckCircle> = {
@@ -11,10 +19,26 @@ const ICON_MAP: Record<ToastType, typeof CheckCircle> = {
 };
 
 const STYLE_MAP: Record<ToastType, { border: string; icon: string; bg: string }> = {
-  success: { border: "border-green-300 dark:border-green-700", icon: "text-green-500", bg: "bg-green-50 dark:bg-green-900/20" },
-  error: { border: "border-red-300 dark:border-red-700", icon: "text-red-500", bg: "bg-red-50 dark:bg-red-900/20" },
-  warning: { border: "border-yellow-300 dark:border-yellow-700", icon: "text-yellow-500", bg: "bg-yellow-50 dark:bg-yellow-900/20" },
-  info: { border: "border-blue-300 dark:border-blue-700", icon: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/20" },
+  success: {
+    border: "border-green-300 dark:border-green-700",
+    icon: "text-green-500",
+    bg: "bg-green-50 dark:bg-green-900/20",
+  },
+  error: {
+    border: "border-red-300 dark:border-red-700",
+    icon: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-900/20",
+  },
+  warning: {
+    border: "border-yellow-300 dark:border-yellow-700",
+    icon: "text-yellow-500",
+    bg: "bg-yellow-50 dark:bg-yellow-900/20",
+  },
+  info: {
+    border: "border-blue-300 dark:border-blue-700",
+    icon: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-900/20",
+  },
 };
 
 function ToastCard({ toast }: { toast: ToastItem }) {

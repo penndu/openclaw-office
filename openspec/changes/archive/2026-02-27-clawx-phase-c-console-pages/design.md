@@ -3,6 +3,7 @@
 Phase A 已建立 `GatewayAdapter` 抽象层（mock / ws 双实现）、Console Stores 骨架、路由系统和 `ConsoleLayout`。Phase B 完成了 Chat Dock 嵌入 Office 视图。四个管控页面（Dashboard / Channels / Skills / Cron）均为占位组件，store 仅有基础 fetch action。
 
 当前系统已具备：
+
 - `adapter-types.ts`：基础类型（ChannelInfo、SkillInfo、CronTask 等），但与 Gateway 真实返回格式存在差距
 - `adapter.ts`：GatewayAdapter 接口，仅含 `channelsStatus`、`skillsStatus`、`cronList/Add/Update/Remove/Run`
 - `view-models.ts`：基础 ViewModel 映射（ChannelCardVM、SkillCardVM、CronTaskCardVM）
@@ -13,6 +14,7 @@ Gateway 真实 API 已确认可用：`channels.status`（返回 `ChannelsStatusR
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 四个管控页面达到"功能完整、数据真实、交互可用"的生产级水平
 - 在 Mock 模式下可完整演示所有功能流程（无 Gateway 也能跑通）
 - 连接真实 Gateway 后可无缝切换，UI 行为一致
@@ -20,6 +22,7 @@ Gateway 真实 API 已确认可用：`channels.status`（返回 `ChannelsStatusR
 - 代码单文件不超过 500 行，组件可测试
 
 **Non-Goals:**
+
 - 不实现 Settings 页面（属于 Phase D）
 - 不实现真实的渠道 OAuth/Token 配置写入（仅 UI + Adapter 调用）
 - 不实现 skill 二进制安装进度条（仅触发安装 + 结果反馈）
@@ -41,7 +44,8 @@ Gateway 真实 API 已确认可用：`channels.status`（返回 `ChannelsStatusR
 
 **理由**: 当前已知 11 种渠道类型，每种的配置字段不同（Telegram 需要 bot token，Discord 需要 bot token + app ID，WhatsApp 需要 QR 扫码，Signal 需要手机号 + CLI 路径等）。静态方案需要 11 个配置组件，维护成本高。
 
-**具体方案**: 
+**具体方案**:
+
 - 定义 `ChannelFieldDef` 类型：`{ key, label, type: "text"|"secret"|"select"|"qr", required, placeholder, validate? }`
 - 在 `src/lib/channel-schemas.ts` 中为每种渠道维护字段数组
 - 通用 `ChannelConfigDialog` 组件遍历字段数组渲染表单
@@ -66,6 +70,7 @@ Gateway 真实 API 已确认可用：`channels.status`（返回 `ChannelsStatusR
 **理由**: 当前 Office 版 Marketplace 只是把 `!isBundled` 技能复用 Installed 卡片渲染，缺少 ClawX 中“发现、辨识、安装”的心智模型，导致市场区视觉和交互都偏弱，用户很难理解哪些是本地已安装技能、哪些是可安装能力、哪些动作会改变系统状态。
 
 **实现边界**:
+
 - 当前 Web/Gateway 仅有 `skills.status`、`skills.install`、`skills.update`
 - **不实现** ClawX Electron IPC 专属能力：`clawhub:search`、`clawhub:uninstall`、打开本地 skills 文件夹
 - **采用降级方案**：基于 `skills.status` 中 `!isBundled` 的条目构造“市场候选列表”，支持本地搜索、已安装识别、安装方式选择和安装态展示

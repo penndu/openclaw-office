@@ -1,19 +1,28 @@
+import {
+  AlertCircle,
+  RefreshCw,
+  Package,
+  Search,
+  ShieldCheck,
+  X,
+  WifiOff,
+  Loader2,
+} from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, RefreshCw, Package, Search, ShieldCheck, X, WifiOff, Loader2 } from "lucide-react";
-import type { SkillInfo } from "@/gateway/adapter-types";
-import { useSkillsStore } from "@/store/console-stores/skills-store";
-import { useClawHubStore } from "@/store/console-stores/clawhub-store";
-import { LoadingState } from "@/components/console/shared/LoadingState";
-import { ErrorState } from "@/components/console/shared/ErrorState";
 import { EmptyState } from "@/components/console/shared/EmptyState";
-import { SkillTabBar } from "@/components/console/skills/SkillTabBar";
-import { SkillCard } from "@/components/console/skills/SkillCard";
-import { SkillDetailDialog } from "@/components/console/skills/SkillDetailDialog";
-import { InstallOptionsDialog } from "@/components/console/skills/InstallOptionsDialog";
-import { ClawHubSkillCard } from "@/components/console/skills/ClawHubSkillCard";
+import { ErrorState } from "@/components/console/shared/ErrorState";
+import { LoadingState } from "@/components/console/shared/LoadingState";
 import { ClawHubDetailDialog } from "@/components/console/skills/ClawHubDetailDialog";
 import { ClawHubInstallDialog } from "@/components/console/skills/ClawHubInstallDialog";
+import { ClawHubSkillCard } from "@/components/console/skills/ClawHubSkillCard";
+import { InstallOptionsDialog } from "@/components/console/skills/InstallOptionsDialog";
+import { SkillCard } from "@/components/console/skills/SkillCard";
+import { SkillDetailDialog } from "@/components/console/skills/SkillDetailDialog";
+import { SkillTabBar } from "@/components/console/skills/SkillTabBar";
+import type { SkillInfo } from "@/gateway/adapter-types";
+import { useClawHubStore } from "@/store/console-stores/clawhub-store";
+import { useSkillsStore } from "@/store/console-stores/skills-store";
 import {
   filterInstalledSkills,
   filterMarketplaceSkills,
@@ -23,25 +32,47 @@ import {
 export function SkillsPage() {
   const { t } = useTranslation("console");
   const {
-    skills, isLoading, error,
-    activeTab, sourceFilter,
-    selectedSkill, detailDialogOpen, installing,
-    fetchSkills, setTab, setSourceFilter,
-    openDetail, closeDetail, toggleSkill, installSkill,
+    skills,
+    isLoading,
+    error,
+    activeTab,
+    sourceFilter,
+    selectedSkill,
+    detailDialogOpen,
+    installing,
+    fetchSkills,
+    setTab,
+    setSourceFilter,
+    openDetail,
+    closeDetail,
+    toggleSkill,
+    installSkill,
   } = useSkillsStore();
 
   const {
-    searchResults, exploreItems, searchQuery,
-    isSearching, isExploring, searchError, exploreError,
-    nextCursor, offlineMode,
-    search, searchImmediate, explore, clearSearch,
+    searchResults,
+    exploreItems,
+    searchQuery,
+    isSearching,
+    isExploring,
+    searchError,
+    exploreError,
+    nextCursor,
+    offlineMode,
+    search,
+    searchImmediate,
+    explore,
+    clearSearch,
   } = useClawHubStore();
 
   const [installTarget, setInstallTarget] = useState<SkillInfo | null>(null);
   const [installedQuery, setInstalledQuery] = useState("");
 
   // ClawHub install dialog state
-  const [clawhubInstall, setClawhubInstall] = useState<{ slug: string; displayName: string } | null>(null);
+  const [clawhubInstall, setClawhubInstall] = useState<{
+    slug: string;
+    displayName: string;
+  } | null>(null);
   // ClawHub detail dialog
   const [clawhubDetailSlug, setClawhubDetailSlug] = useState<string | null>(null);
 
@@ -101,9 +132,12 @@ export function SkillsPage() {
     fetchSkills();
   }, [fetchSkills]);
 
-  const handleMarketplaceSearch = useCallback((value: string) => {
-    search(value);
-  }, [search]);
+  const handleMarketplaceSearch = useCallback(
+    (value: string) => {
+      search(value);
+    },
+    [search],
+  );
 
   const handleSearchButton = useCallback(() => {
     if (searchQuery.trim()) {
@@ -121,7 +155,11 @@ export function SkillsPage() {
   if (isLoading && skills.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title={t("skills.title")} description={t("skills.description")} onRefresh={fetchSkills} />
+        <PageHeader
+          title={t("skills.title")}
+          description={t("skills.description")}
+          onRefresh={fetchSkills}
+        />
         <LoadingState />
       </div>
     );
@@ -130,7 +168,11 @@ export function SkillsPage() {
   if (error && skills.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title={t("skills.title")} description={t("skills.description")} onRefresh={fetchSkills} />
+        <PageHeader
+          title={t("skills.title")}
+          description={t("skills.description")}
+          onRefresh={fetchSkills}
+        />
         <ErrorState message={error} onRetry={fetchSkills} />
       </div>
     );
@@ -138,7 +180,12 @@ export function SkillsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("skills.title")} description={t("skills.description")} onRefresh={fetchSkills} loading={isLoading} />
+      <PageHeader
+        title={t("skills.title")}
+        description={t("skills.description")}
+        onRefresh={fetchSkills}
+        loading={isLoading}
+      />
 
       <SkillTabBar activeTab={activeTab} onTabChange={setTab} />
 
@@ -170,7 +217,11 @@ export function SkillsPage() {
           </div>
 
           {installedSkills.length === 0 ? (
-            <EmptyState icon={Package} title={t("skills.empty.title")} description={t("skills.empty.description")} />
+            <EmptyState
+              icon={Package}
+              title={t("skills.empty.title")}
+              description={t("skills.empty.description")}
+            />
           ) : (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {installedSkills.map((skill) => (
@@ -192,7 +243,9 @@ export function SkillsPage() {
           <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-800/60">
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 text-gray-500" />
-              <p className="text-sm text-gray-600 dark:text-gray-300">{t("skills.marketplace.securityNote")}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {t("skills.marketplace.securityNote")}
+              </p>
             </div>
           </div>
 
@@ -233,7 +286,11 @@ export function SkillsPage() {
               disabled={isSearching || !searchQuery.trim()}
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {isSearching ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("skills.marketplace.searchButton")}
+              {isSearching ? (
+                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+              ) : (
+                t("skills.marketplace.searchButton")
+              )}
             </button>
           </div>
 
@@ -329,7 +386,11 @@ export function SkillsPage() {
                         disabled={isExploring}
                         className="rounded-xl border border-gray-300 px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
                       >
-                        {isExploring ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("clawhub.loadMore")}
+                        {isExploring ? (
+                          <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                        ) : (
+                          t("clawhub.loadMore")
+                        )}
                       </button>
                     </div>
                   )}
@@ -375,7 +436,17 @@ export function SkillsPage() {
   );
 }
 
-function PageHeader({ title, description, onRefresh, loading }: { title: string; description: string; onRefresh: () => void; loading?: boolean }) {
+function PageHeader({
+  title,
+  description,
+  onRefresh,
+  loading,
+}: {
+  title: string;
+  description: string;
+  onRefresh: () => void;
+  loading?: boolean;
+}) {
   const { t } = useTranslation("common");
   return (
     <div className="flex items-start justify-between">

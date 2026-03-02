@@ -1,8 +1,11 @@
 # rpc-client Specification
 
 ## Purpose
+
 TBD - created by archiving change phase-1-foundation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: RPC 请求/响应封装
 
 系统 SHALL 提供类型安全的 RPC 请求方法，通过 WebSocket 向 Gateway 发送请求并等待响应。
@@ -45,4 +48,3 @@ TBD - created by archiving change phase-1-foundation. Update Purpose after archi
 
 - **WHEN** WebSocket 认证成功
 - **THEN** 系统 SHALL 调用 `usage.status` 获取全局用量数据，更新 globalMetrics
-

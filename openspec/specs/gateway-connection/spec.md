@@ -1,8 +1,11 @@
 # gateway-connection Specification
 
 ## Purpose
+
 TBD - created by archiving change phase-1-foundation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: WebSocket 连接建立
 
 系统 SHALL 通过原生 WebSocket API 连接 OpenClaw Gateway（默认地址 `ws://localhost:18789`）。连接地址 SHALL 通过 `VITE_GATEWAY_URL` 环境变量可配置。
@@ -87,4 +90,3 @@ TBD - created by archiving change phase-1-foundation. Update Purpose after archi
 
 - **WHEN** 使用 GatewayAdapter 的 `onEvent()` 方法订阅事件
 - **THEN** Adapter SHALL 将 WebSocket 事件帧解包后通过回调分发，回调签名为 `(event: string, payload: unknown) => void`，使 store 层不直接依赖 WebSocket 客户端
-

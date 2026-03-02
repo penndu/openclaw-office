@@ -1,11 +1,7 @@
 import { create } from "zustand";
-import type {
-  AgentCreateParams,
-  AgentFileInfo,
-  AgentModelConfig,
-} from "@/gateway/adapter-types";
-import type { AgentSummary } from "@/gateway/types";
 import { getAdapter, waitForAdapter } from "@/gateway/adapter-provider";
+import type { AgentCreateParams, AgentFileInfo, AgentModelConfig } from "@/gateway/adapter-types";
+import type { AgentSummary } from "@/gateway/types";
 
 export type AgentTab = "overview" | "files" | "tools" | "skills" | "channels" | "cronJobs";
 
@@ -87,14 +83,19 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
       const adapter = getAdapter();
       const [snap, catalogModels] = await Promise.all([
         adapter.configGet(),
-        adapter.modelsList().catch(() => [] as Array<{ id: string; name: string; provider: string }>),
+        adapter
+          .modelsList()
+          .catch(() => [] as Array<{ id: string; name: string; provider: string }>),
       ]);
       const config = snap.config;
 
       const seen = new Set<string>();
       const options: SystemModelOption[] = [];
 
-      const catalogByProvider = new Map<string, Array<{ id: string; name: string; provider: string }>>();
+      const catalogByProvider = new Map<
+        string,
+        Array<{ id: string; name: string; provider: string }>
+      >();
       for (const m of catalogModels) {
         const key = `${m.provider}/${m.id}`;
         if (seen.has(key)) continue;
@@ -120,7 +121,9 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
       }
 
       const agentModelConfigs: Record<string, { primary: string; fallbacks: string[] }> = {};
-      const agentsList = (config?.agents as Record<string, unknown> | undefined)?.list as Array<Record<string, unknown>> | undefined;
+      const agentsList = (config?.agents as Record<string, unknown> | undefined)?.list as
+        | Array<Record<string, unknown>>
+        | undefined;
       if (agentsList) {
         for (const entry of agentsList) {
           const id = entry.id as string | undefined;
@@ -155,7 +158,12 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
       }));
       const { selectedAgentId } = get();
       const autoSelect = selectedAgentId == null ? result.defaultId : selectedAgentId;
-      set({ agents, defaultAgentId: result.defaultId, selectedAgentId: autoSelect, isLoading: false });
+      set({
+        agents,
+        defaultAgentId: result.defaultId,
+        selectedAgentId: autoSelect,
+        isLoading: false,
+      });
     } catch (err) {
       set({ error: String(err), isLoading: false });
     }
@@ -188,7 +196,12 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
   },
 
   fetchFileContent: async (agentId, name) => {
-    set({ selectedFileName: name, fileContent: null, originalFileContent: null, isFileDirty: false });
+    set({
+      selectedFileName: name,
+      fileContent: null,
+      originalFileContent: null,
+      isFileDirty: false,
+    });
     try {
       await waitForAdapter();
       const result = await getAdapter().agentsFilesGet(agentId, name);

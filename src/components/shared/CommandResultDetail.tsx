@@ -1,6 +1,6 @@
+import { Copy, Check, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Check, AlertTriangle } from "lucide-react";
 
 interface CommandResultDetailProps {
   stdout?: string;
@@ -9,7 +9,12 @@ interface CommandResultDetailProps {
   warnings?: string[];
 }
 
-export function CommandResultDetail({ stdout, stderr, exitCode, warnings }: CommandResultDetailProps) {
+export function CommandResultDetail({
+  stdout,
+  stderr,
+  exitCode,
+  warnings,
+}: CommandResultDetailProps) {
   const { t } = useTranslation("console");
   const [copied, setCopied] = useState(false);
 
@@ -32,7 +37,10 @@ export function CommandResultDetail({ stdout, stderr, exitCode, warnings }: Comm
       {warnings && warnings.length > 0 && (
         <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-2 dark:border-yellow-700 dark:bg-yellow-900/20">
           {warnings.map((w, i) => (
-            <div key={i} className="flex items-start gap-1.5 text-xs text-yellow-700 dark:text-yellow-300">
+            <div
+              key={i}
+              className="flex items-start gap-1.5 text-xs text-yellow-700 dark:text-yellow-300"
+            >
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
               <span>{w}</span>
             </div>
@@ -43,7 +51,13 @@ export function CommandResultDetail({ stdout, stderr, exitCode, warnings }: Comm
       {exitCode != null && (
         <div className="flex items-center gap-2 text-xs">
           <span className="text-gray-500 dark:text-gray-400">{t("commandResult.exitCode")}:</span>
-          <span className={exitCode === 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+          <span
+            className={
+              exitCode === 0
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }
+          >
             {exitCode}
           </span>
         </div>
@@ -57,12 +71,14 @@ export function CommandResultDetail({ stdout, stderr, exitCode, warnings }: Comm
             className="absolute right-2 top-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
             title={t("commandResult.copyAll")}
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-400" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </button>
 
-          {stdout?.trim() && (
-            <pre className="p-3 text-xs text-gray-200">{stdout}</pre>
-          )}
+          {stdout?.trim() && <pre className="p-3 text-xs text-gray-200">{stdout}</pre>}
           {stderr?.trim() && (
             <pre className="border-t border-red-700/50 p-3 text-xs text-red-300">{stderr}</pre>
           )}

@@ -31,14 +31,23 @@ afterEach(() => {
 describe("clawhubSearch", () => {
   it("returns search results", async () => {
     const results = [
-      { score: 3.69, slug: "powerpoint-pptx", displayName: "PowerPoint PPTX", summary: null, version: null, updatedAt: 1000 },
+      {
+        score: 3.69,
+        slug: "powerpoint-pptx",
+        displayName: "PowerPoint PPTX",
+        summary: null,
+        version: null,
+        updatedAt: 1000,
+      },
     ];
     mockFetch.mockResolvedValueOnce(jsonResponse({ results }));
 
     const res = await clawhubSearch("pptx", 10);
     expect(res).toHaveLength(1);
     expect(res[0].slug).toBe("powerpoint-pptx");
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("/api/v1/search?q=pptx&limit=10"));
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/search?q=pptx&limit=10"),
+    );
   });
 
   it("returns empty array when no results", async () => {
@@ -75,7 +84,24 @@ describe("clawhubSearch", () => {
 describe("clawhubExplore", () => {
   it("returns items and nextCursor", async () => {
     const data = {
-      items: [{ slug: "skill-1", displayName: "Skill 1", summary: null, tags: {}, stats: { downloads: 10, installsAllTime: 0, installsCurrent: 0, stars: 0, versions: 1, comments: 0 }, createdAt: 1000, updatedAt: 2000 }],
+      items: [
+        {
+          slug: "skill-1",
+          displayName: "Skill 1",
+          summary: null,
+          tags: {},
+          stats: {
+            downloads: 10,
+            installsAllTime: 0,
+            installsCurrent: 0,
+            stars: 0,
+            versions: 1,
+            comments: 0,
+          },
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      ],
       nextCursor: "abc",
     };
     mockFetch.mockResolvedValueOnce(jsonResponse(data));
@@ -105,7 +131,22 @@ describe("clawhubExplore", () => {
 describe("clawhubSkillDetail", () => {
   it("returns skill detail", async () => {
     const detail = {
-      skill: { slug: "test", displayName: "Test", summary: null, tags: {}, stats: { downloads: 5, installsAllTime: 0, installsCurrent: 0, stars: 1, versions: 1, comments: 0 }, createdAt: 1000, updatedAt: 2000 },
+      skill: {
+        slug: "test",
+        displayName: "Test",
+        summary: null,
+        tags: {},
+        stats: {
+          downloads: 5,
+          installsAllTime: 0,
+          installsCurrent: 0,
+          stars: 1,
+          versions: 1,
+          comments: 0,
+        },
+        createdAt: 1000,
+        updatedAt: 2000,
+      },
       latestVersion: { version: "1.0.0", createdAt: 1000, changelog: "initial" },
       owner: { handle: "user1" },
     };

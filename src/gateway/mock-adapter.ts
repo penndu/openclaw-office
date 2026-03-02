@@ -329,12 +329,189 @@ function deepMergePatch(
   return result;
 }
 
+function randRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+class SubAgentSimulator {
+  private timers: ReturnType<typeof setTimeout>[] = [];
+  private activeSubAgents = new Set<string>();
+  private subCounter = 0;
+  private running = false;
+
+  constructor(
+    private emit: (event: string, payload: unknown) => void,
+    private maxConcurrent: number = 3,
+  ) {}
+
+  start(): void {
+    if (this.running) return;
+    this.running = true;
+    this.scheduleNextSpawn(5000);
+    this.scheduleAgentToAgentComm(20_000);
+  }
+
+  stop(): void {
+    this.running = false;
+    for (const t of this.timers) clearTimeout(t);
+    this.timers = [];
+    this.activeSubAgents.clear();
+  }
+
+  private schedule(fn: () => void, ms: number): void {
+    const t = setTimeout(fn, ms);
+    this.timers.push(t);
+  }
+
+  private scheduleNextSpawn(delayMs: number): void {
+    this.schedule(() => {
+      if (!this.running) return;
+      if (this.activeSubAgents.size < this.maxConcurrent) {
+        this.spawnSubAgent();
+      }
+      this.scheduleNextSpawn(randRange(3000, 8000));
+    }, delayMs);
+  }
+
+  private spawnSubAgent(): void {
+    this.subCounter++;
+    const subId = `mock-sub-${this.subCounter}`;
+    const runId = `mock-run-sub-${this.subCounter}`;
+    const sessionKey = `mock-session-sub-${this.subCounter}`;
+
+    this.activeSubAgents.add(subId);
+
+    // lifecycle start
+    this.emit("agent", {
+      runId,
+      seq: 1,
+      stream: "lifecycle",
+      ts: Date.now(),
+      data: { phase: "start", agentId: subId, parentAgentId: "main" },
+      sessionKey,
+    });
+
+    // thinking phase
+    this.schedule(() => {
+      if (!this.running) return;
+      this.emit("agent", {
+        runId,
+        seq: 2,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: `Sub-agent ${subId} 正在分析任务...` },
+        sessionKey,
+      });
+    }, randRange(1000, 2000));
+
+    // tool calling phase
+    this.schedule(() => {
+      if (!this.running) return;
+      const tools = ["web_search", "code_exec", "file_read", "analyze_data"];
+      const tool = tools[Math.floor(Math.random() * tools.length)];
+      this.emit("agent", {
+        runId,
+        seq: 3,
+        stream: "tool",
+        ts: Date.now(),
+        data: { name: tool, phase: "start" },
+        sessionKey,
+      });
+    }, randRange(3000, 5000));
+
+    // speaking phase
+    this.schedule(() => {
+      if (!this.running) return;
+      this.emit("agent", {
+        runId,
+        seq: 4,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: `Sub-agent ${subId} 已完成任务分析。` },
+        sessionKey,
+      });
+    }, randRange(6000, 9000));
+
+    // lifecycle end
+    const endDelay = randRange(8000, 15_000);
+    this.schedule(() => {
+      if (!this.running) return;
+      this.emit("agent", {
+        runId,
+        seq: 5,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "end", agentId: subId },
+        sessionKey,
+      });
+      this.activeSubAgents.delete(subId);
+    }, endDelay);
+  }
+
+  private scheduleAgentToAgentComm(delayMs: number): void {
+    this.schedule(() => {
+      if (!this.running) return;
+      const agents = ["main", "coder", "ai-researcher", "ecommerce"];
+      const a = agents[Math.floor(Math.random() * agents.length)];
+      let b = a;
+      while (b === a) b = agents[Math.floor(Math.random() * agents.length)];
+
+      const sessionKey = `a2a-${Date.now()}`;
+      const runIdA = `a2a-run-${a}-${Date.now()}`;
+      const runIdB = `a2a-run-${b}-${Date.now()}`;
+
+      // Both agents start in the same session (triggers collaboration link)
+      this.emit("agent", {
+        runId: runIdA,
+        seq: 1,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "start", agentId: a },
+        sessionKey,
+      });
+      this.emit("agent", {
+        runId: runIdB,
+        seq: 1,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "start", agentId: b },
+        sessionKey,
+      });
+
+      // End communication after some time
+      const commDuration = randRange(10_000, 20_000);
+      this.schedule(() => {
+        if (!this.running) return;
+        this.emit("agent", {
+          runId: runIdA,
+          seq: 2,
+          stream: "lifecycle",
+          ts: Date.now(),
+          data: { phase: "end", agentId: a },
+          sessionKey,
+        });
+        this.emit("agent", {
+          runId: runIdB,
+          seq: 2,
+          stream: "lifecycle",
+          ts: Date.now(),
+          data: { phase: "end", agentId: b },
+          sessionKey,
+        });
+      }, commDuration);
+
+      this.scheduleAgentToAgentComm(randRange(15_000, 30_000));
+    }, delayMs);
+  }
+}
+
 export class MockAdapter implements GatewayAdapter {
   private handlers: Set<AdapterEventHandler> = new Set();
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private pendingTimers: ReturnType<typeof setTimeout>[] = [];
   private mockConfig: Record<string, unknown> = mockConfigData();
   private mockHash = Date.now().toString(36);
+  private subAgentSimulator: SubAgentSimulator | null = null;
 
   async connect(): Promise<void> {
     this.heartbeatTimer = setInterval(() => {
@@ -342,6 +519,13 @@ export class MockAdapter implements GatewayAdapter {
         h("heartbeat", { ts: Date.now() });
       }
     }, 30_000);
+
+    // Start sub-agent simulator after connection
+    this.subAgentSimulator = new SubAgentSimulator(
+      (event, payload) => this.emit(event, payload),
+      3,
+    );
+    this.subAgentSimulator.start();
   }
 
   disconnect(): void {
@@ -349,6 +533,8 @@ export class MockAdapter implements GatewayAdapter {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+    this.subAgentSimulator?.stop();
+    this.subAgentSimulator = null;
     this.cancelPendingTimers();
     this.handlers.clear();
   }

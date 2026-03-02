@@ -7,6 +7,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 50 Agent 场景下 3D 帧率 ≥ 24fps
 - 2D 模式 bundle 不包含 Three.js（通过 Vite 代码分割验证）
 - 屏幕宽度 < 768px 时自动适配移动端布局
@@ -14,6 +15,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 - 关键流程有 E2E 测试覆盖
 
 **Non-Goals:**
+
 - 不做 WebWorker offscreen canvas（复杂度过高）
 - 不做 PWA/Service Worker
 - 不做 SSR（纯客户端 SPA）
@@ -26,6 +28,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 **选择**: 当 Agent 数量 > 20 时，使用 THREE.InstancedMesh 合并身体和头部渲染。
 
 **做法**:
+
 - 新建 `InstancedAgents.tsx` 组件
 - 一个 InstancedMesh 渲染所有 Agent 的身体（CapsuleGeometry），另一个渲染头部（SphereGeometry）
 - 每帧通过 `setMatrixAt` 更新每个 instance 的位置/旋转
@@ -38,6 +41,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 **选择**: 在 Scene3D 中计算相机与场景中心的距离，全局切换 LOD 级别。
 
 **做法**:
+
 - 近距（camera distance < 15）：完整角色 + 气泡 + 特效 + HTML 标签
 - 中距（15 ≤ distance < 30）：简化角色（仅身体+头部） + 状态色点（无气泡/HTML overlay）
 - 远距（distance ≥ 30）：仅渲染状态色小球（类似 2D 模式的圆点）
@@ -49,6 +53,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 **选择**: MetricsPanel 中的图表组件使用 `React.lazy` 加载。
 
 **做法**:
+
 - TokenLineChart、CostPieChart、NetworkGraph、ActivityHeatmap 均使用 lazy import
 - 各 Tab 内容用 `<Suspense>` 包裹，fallback 为小型 loading spinner
 - Vite build 会自动将 recharts 和图表组件拆分为独立 chunk
@@ -59,6 +64,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 **选择**: 新建 `useResponsive` hook，使用 `matchMedia` 监听断点。
 
 **做法**:
+
 - 断点: 768px（sm）、1024px（md）
 - < 768px: 自动切换 viewMode 为 "2d"，侧栏变为底部可上滑抽屉（Sheet），面板全宽
 - 768px-1024px: 侧栏可折叠（已有 sidebarCollapsed），面板适度压缩
@@ -69,6 +75,7 @@ Phase 3 性能预算：50 Agent 场景 3D 帧率 ≥ 24fps，2D 模式不加载 
 **选择**: 使用 Vitest 编写模拟 E2E 测试（不引入 Playwright），覆盖关键数据流。
 
 **做法**:
+
 - 测试 App 组件启动 → Mock 模式初始化 → Agent 列表渲染
 - 测试 Agent 事件到达 → UI 状态更新
 - 测试 viewMode 切换（2D ↔ 3D 组件加载/卸载）

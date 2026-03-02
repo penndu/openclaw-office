@@ -104,7 +104,7 @@ export function applyMeetingGathering(
     const seats = calculateMeetingSeats(group, tableIndex);
     for (const [agentId, pos] of seats) {
       const agent = agents.get(agentId);
-      if (agent && agent.zone !== "meeting") {
+      if (agent && agent.zone !== "meeting" && agent.movement?.toZone !== "meeting") {
         moveToMeeting(agentId, pos);
       }
       inMeeting.add(agentId);

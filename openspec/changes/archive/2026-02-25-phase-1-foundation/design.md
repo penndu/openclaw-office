@@ -5,6 +5,7 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 主机上已运行 OpenClaw Gateway（ws://localhost:18789），可直接进行真实连接开发。通过源码审查确认 Gateway 使用协议版本 3（PROTOCOL_VERSION = 3），认证成功后返回 `{ type: "res", ok: true, payload: HelloOk }` 格式，而非文档中描述的 `connect.accepted` 事件。
 
 关键约束：
+
 - Gateway 认证需要 pairing token，client.id 需使用已注册值（如 `"webchat-ui"`），mode 使用 `"ui"`
 - Gateway res 帧使用 `ok: boolean` 而非 `result/error` 二选一
 - Agent 事件通过 `event: "agent"` 广播，payload 为 AgentEventPayload
@@ -37,11 +38,13 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：客户端连接参数使用 `client.id = "webchat-ui"`、`client.mode = "ui"`、`caps = ["tool-events"]`。
 
 **理由**：
+
 - Gateway 源码中 `GatewayClientId` 枚举已注册 `"webchat-ui"`，无需修改 Gateway 即可使用
 - `"ui"` 模式是 Gateway 已支持的客户端模式，适合可视化监控场景
 - 请求 `"tool-events"` capability 以接收工具调用的详细事件
 
 **备选考虑**：
+
 - 自定义新 ID（如 `"office-viz"`）：需要修改 Gateway 源码注册，增加不必要的耦合
 - 使用 `"companion"` 模式：可行但语义不如 `"ui"` 精确
 
@@ -50,6 +53,7 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：pairing token 通过 `VITE_GATEWAY_TOKEN` 环境变量配置，同时在 TopBar 提供输入框允许运行时输入/更新。
 
 **理由**：
+
 - 开发阶段通过 `.env.local` 文件配置 token，无需每次手动输入
 - 运行时输入框支持部署后的首次配对场景
 - Token 仅存于内存，刷新后清除，符合安全要求
@@ -65,11 +69,13 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：WebSocket 事件先推入优先级队列，每个 requestAnimationFrame 周期（~16ms）批量提交到 Zustand store。lifecycle 和 error 事件标记为高优先级立即处理。
 
 **理由**：
+
 - 多 Agent 并发时事件可达 50-100+/秒，逐条更新会导致 React 重渲染风暴
 - RAF 与浏览器渲染周期对齐，避免不必要的中间态渲染
 - 高优先级通道确保关键状态变更（start/end/error）零延迟
 
 **备选考虑**：
+
 - 固定 100ms 定时器：简单但与渲染周期不对齐，可能产生撕裂感
 - 每条事件直接 setState：简单但性能不可接受
 
@@ -78,6 +84,7 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：常驻 Agent 通过 `agentId` 的 hash 值确定性分配到 Desk Zone 预设网格坐标。运行时新出现的 Agent 按到达顺序分配 Hot Desk Zone 空闲位。
 
 **理由**：
+
 - 确定性分配保证同一 Agent 每次刷新位置不变，便于用户形成空间记忆
 - Hash 分配不依赖 Agent 创建顺序，新增/删除 Agent 不影响其他 Agent 位置
 - 双区域设计为 Phase 2 的 Sub-Agent 动态分配预留空间
@@ -87,6 +94,7 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：FloorPlan SVG 使用 `viewBox="0 0 1200 700"` 固定坐标系，四个区域在此坐标系内静态定义。
 
 **理由**：
+
 - 固定坐标系使布局计算与窗口大小解耦，SVG 自动缩放适配容器
 - 1200×700 的宽高比（12:7）适合大多数显示器
 - 比 Phase 1 文档中的 1000×600 略大，为区域标签和间距留出更多空间
@@ -96,6 +104,7 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 **决策**：使用单一 `useOfficeStore` 作为顶层 store，通过 selector 函数切片订阅避免不必要重渲染。不拆分为多个 store。
 
 **理由**：
+
 - Agent 状态、连接状态、UI 状态之间有频繁交叉引用（如：连接断开时所有 Agent 标记 offline）
 - 单一 store + immer 使跨切片的原子更新成为可能
 - selector 切片（如 `useOfficeStore(s => s.agents.get(id))`）提供与多 store 相当的性能
@@ -103,12 +112,14 @@ OpenClaw Office 项目已完成初始脚手架：Vite 6 + React 19 + TypeScript 
 ### D8: 测试策略——分层测试 + 真实协议验证
 
 **决策**：
+
 - **单元测试**：office-store（状态转换）、event-parser（事件解析）、position-allocator（坐标计算）、event-throttle（批处理逻辑）
 - **组件测试**：AgentDot（点击/悬停）、Sidebar（搜索/过滤）、MetricsPanel（数据展示）
 - **集成测试**：ws-client 连接生命周期（使用 mock WebSocket）、RPC 请求/响应链路
 - 不依赖真实 Gateway 运行测试——所有 WS 测试使用 mock/stub
 
 **理由**：
+
 - store 和 event-parser 是数据链路核心，必须高覆盖率保证正确性
 - 组件测试聚焦关键交互路径，不追求全覆盖
 - WS 集成测试验证认证流程和重连逻辑，但使用 mock 避免对外部依赖

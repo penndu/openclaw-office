@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import type { SkillInfo, SkillInstallResult } from "@/gateway/adapter-types";
 import { getAdapter, waitForAdapter } from "@/gateway/adapter-provider";
-import { toastSuccess, toastError } from "@/store/toast-store";
+import type { SkillInfo, SkillInstallResult } from "@/gateway/adapter-types";
 import i18n from "@/i18n";
+import { toastSuccess, toastError } from "@/store/toast-store";
 
 export type SkillTab = "installed" | "marketplace";
 export type SkillSourceFilter = "all" | "built-in" | "marketplace";
@@ -141,7 +141,11 @@ export const useSkillsStore = create<SkillsStoreState>((set, get) => ({
         toastSuccess(i18n.t("console:skills.toast.installSuccess", { name }));
       } else {
         const detail = [result.stdout, result.stderr].filter(Boolean).join("\n\n");
-        toastError(i18n.t("console:skills.toast.installFailed", { name }), result.message, detail || undefined);
+        toastError(
+          i18n.t("console:skills.toast.installFailed", { name }),
+          result.message,
+          detail || undefined,
+        );
       }
       if (result.warnings?.length) {
         for (const w of result.warnings) {

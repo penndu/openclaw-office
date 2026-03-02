@@ -5,6 +5,7 @@
 目标设计（参考图）展示了一个扁平化等距（flat isometric）俯视视角的数字办公室：桌椅家具提供空间上下文，Agent 以拟人化头像坐在工位上，会议区有大圆桌和围坐的 Agent，休息区有沙发和绿植。Agent 工作状态通过名称标签、状态色环和动画清晰表达。
 
 已有基础设施可复用：
+
 - `SvgAvatarData`（`avatar-generator.ts`）可用于生成确定性的 Agent 面孔
 - Zustand Store 中的 `VisualAgent.zone` / `VisualAgent.status` 提供完整的状态数据
 - `position-allocator.ts` 的网格分配逻辑可扩展为"桌+椅"单元分配
@@ -14,6 +15,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 将 2D 平面图从"简单矩形+圆点"升级为"扁平化等距风格的数字办公室"，具有桌椅家具、拟人化头像、状态动画
 - 保持现有数据流不变（Store → 组件），仅替换渲染层
 - Agent 数量从 1 到 50+ 时，布局自适应且保持可读性
@@ -22,6 +24,7 @@
 - 性能：50 个 Agent 时保持 ≥30fps
 
 **Non-Goals:**
+
 - 不改变 3D 模式（`office-3d/` 组件保持不变）
 - 不改变 Store 数据模型或 Gateway 事件处理逻辑
 - 不引入新的外部依赖库（纯 SVG + CSS 实现）
@@ -61,6 +64,7 @@ Agent 使用 40px 圆形头像（利用 `SvgAvatarData` 生成确定性面孔的
 - 对比方案：保持现有 Bot 图标——所有 Agent 长得一样，无法区分身份
 
 **头像结构：**
+
 ```
 <g> (AgentAvatar)
   ├── <circle> 状态色环（外圈，带动画）

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { initAdapter } from "@/gateway/adapter-provider";
+import { initAdapter, isMockMode } from "@/gateway/adapter-provider";
 import { GatewayRpcClient } from "@/gateway/rpc-client";
 import type {
   AgentEventPayload,
   AgentSummary,
+  AgentsListResponse,
   GatewayEventFrame,
   HealthSnapshot,
 } from "@/gateway/types";
@@ -33,6 +34,47 @@ export function useGatewayConnection({ url, token }: UseGatewayConnectionOptions
   useEffect(() => {
     if (!url) {
       return;
+    }
+
+    // Mock mode: use MockAdapter directly (no WebSocket needed)
+    if (isMockMode()) {
+      let unsubEvent: (() => void) | null = null;
+
+      void initAdapter("mock").then(async (adapter) => {
+        // 1. Wire event handler FIRST so no events are lost
+        unsubEvent = adapter.onEvent((event: string, payload: unknown) => {
+          if (event === "agent") {
+            processAgentEvent(payload as AgentEventPayload);
+          }
+        });
+
+        // 2. Apply config BEFORE initAgents (prefillLoungePlaceholders uses maxSubAgents)
+        const config = await adapter.configGet();
+        const cfg = config.config as Record<string, unknown>;
+        const agentsCfg = cfg.agents as Record<string, unknown> | undefined;
+        const defaults = agentsCfg?.defaults as Record<string, unknown> | undefined;
+        const subagents = defaults?.subagents as { maxConcurrent?: number } | undefined;
+        if (subagents?.maxConcurrent) {
+          setMaxSubAgents(subagents.maxConcurrent);
+        }
+        const tools = cfg.tools as Record<string, unknown> | undefined;
+        const a2a = tools?.agentToAgent as { enabled?: boolean; allow?: string[] } | undefined;
+        if (a2a) {
+          setAgentToAgentConfig({
+            enabled: a2a.enabled ?? false,
+            allow: Array.isArray(a2a.allow) ? a2a.allow : [],
+          });
+        }
+
+        // 3. Init agents (triggers prefillLoungePlaceholders with correct maxSubAgents)
+        const agentList = await adapter.agentsList() as AgentsListResponse;
+        initAgents(agentList.agents);
+        setOperatorScopes(["operator.admin"]);
+        setConnectionStatus("connected");
+      });
+      return () => {
+        unsubEvent?.();
+      };
     }
 
     const ws = new GatewayWsClient();
