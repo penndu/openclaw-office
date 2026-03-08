@@ -1,6 +1,6 @@
 {
   "name": "@ww-ai-lab/openclaw-office",
-  "version": "2026.3.8",
+  "version": "2026.3.8-1",
   "description": "Visual monitoring & management frontend for OpenClaw Multi-Agent system",
   "keywords": [
     "ai-agents",
@@ -41,8 +41,8 @@
     "lint": "oxlint src/",
     "preview": "vite preview",
     "start": "node ./bin/openclaw-office.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

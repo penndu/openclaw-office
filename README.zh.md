@@ -8,6 +8,9 @@
 
 **核心隐喻：** Agent = 数字员工 | 办公室 = Agent 运行时 | 工位 = Session | 会议室 = 协作上下文
 
+> **已支持远程 Gateway 接入**  
+> OpenClaw Office 现在已经支持通过统一的 `/gateway-ws` 代理流程接入远程 OpenClaw Gateway。无论是 **阿里云**、**腾讯云**，还是其他托管环境，都可以在首次启动引导中直接粘贴访问地址完成接入；如果链接中包含 token，Office 会自动提取。
+
 ---
 
 ## 功能概览
@@ -114,6 +117,15 @@ npm install -g @ww-ai-lab/openclaw-office
 openclaw-office
 ```
 
+### 远程 Gateway 支持
+
+OpenClaw Office 同时支持：
+
+- **本地 Gateway** — 连接你本机或局域网内的默认 Gateway
+- **远程 Gateway** — 连接部署在 **阿里云**、**腾讯云** 或其他环境中的 OpenClaw 服务
+
+首次启动时，Office 会展示连接引导界面。浏览器侧始终通过同源路径 `/gateway-ws` 建立连接，再由本地 Node 代理转发到你选择的本地或远程 Gateway。
+
 ### Gateway Token 自动检测
 
 如果本地已安装 [OpenClaw](https://github.com/openclaw/openclaw)，Gateway 认证 token 会从 `~/.openclaw/openclaw.json` **自动读取**，无需手动配置。
@@ -199,7 +211,7 @@ openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth true
 pnpm dev
 ```
 
-在浏览器中打开 `http://localhost:5180`。在 dev 模式下，前端会连接同源路径 `/gateway-ws`，再由 Vite 将该路径代理到配置的 Gateway 上游地址（默认 `ws://localhost:18789`）。
+在浏览器中打开 `http://localhost:5180`。在 dev 模式下，前端始终连接同源路径 `/gateway-ws`，再由 Vite 将该路径代理到配置的 Gateway 上游地址（默认 `ws://localhost:18789`）。`VITE_GATEWAY_URL` 仅用于配置代理上游，不会作为浏览器直连 WebSocket 地址使用。
 
 ### 环境变量
 

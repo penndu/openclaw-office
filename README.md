@@ -8,6 +8,9 @@
 
 **Core Metaphor:** Agent = Digital Employee | Office = Agent Runtime | Desk = Session | Meeting Pod = Collaboration Context
 
+> **Remote Gateway Ready**  
+> OpenClaw Office now supports remote OpenClaw Gateway onboarding through the same `/gateway-ws` proxy flow used for local deployments. Aliyun, Tencent Cloud, and other hosted OpenClaw environments can be connected directly from the first-launch setup UI by pasting the access URL. If the URL contains a token, Office extracts it automatically.
+
 ---
 
 ## Features
@@ -114,6 +117,15 @@ npm install -g @ww-ai-lab/openclaw-office
 openclaw-office
 ```
 
+### Remote Gateway Support
+
+OpenClaw Office supports both:
+
+- **Local Gateway** — connect to the default Gateway running on your machine or LAN
+- **Remote Gateway** — connect to hosted OpenClaw environments such as **Aliyun**, **Tencent Cloud**, or any other public/private deployment
+
+At first launch, Office shows a connection setup dialog. The browser always connects through the same-origin `/gateway-ws` proxy, while the local Node proxy forwards traffic to the selected local or remote Gateway target.
+
 ### Gateway Token Auto-Detection
 
 If [OpenClaw](https://github.com/openclaw/openclaw) is installed locally, the Gateway auth token is **automatically detected** from `~/.openclaw/openclaw.json` — no manual configuration needed.
@@ -199,7 +211,7 @@ Ensure the OpenClaw Gateway is running on the configured address (default `local
 pnpm dev
 ```
 
-Open `http://localhost:5180` in your browser. In dev mode, the frontend connects to the same-origin path `/gateway-ws`, and Vite proxies that path to the configured Gateway upstream (default `ws://localhost:18789`).
+Open `http://localhost:5180` in your browser. In dev mode, the frontend always connects to the same-origin path `/gateway-ws`, and Vite proxies that path to the configured Gateway upstream (default `ws://localhost:18789`). `VITE_GATEWAY_URL` configures the proxy upstream and is not used as a browser-direct websocket URL.
 
 ### Environment Variables
 
