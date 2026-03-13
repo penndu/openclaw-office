@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../components/living-office/theme/living-office-vars.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

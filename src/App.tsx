@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ConsoleLayout } from "@/components/layout/ConsoleLayout";
+import { LivingOfficeView } from "@/components/living-office/LivingOfficeView";
 import { FloorPlan } from "@/components/office-2d/FloorPlan";
 import { AgentsPage } from "@/components/pages/AgentsPage";
 import { ChannelsPage } from "@/components/pages/ChannelsPage";
@@ -78,6 +79,7 @@ function ThemeSync() {
 
 const PAGE_MAP: Record<string, PageId> = {
   "/": "office",
+  "/living-office": "office",
   "/dashboard": "dashboard",
   "/agents": "agents",
   "/channels": "channels",
@@ -123,6 +125,7 @@ export function App() {
       <Routes>
         <Route element={<AppShell wsClient={wsClient} isMobile={isMobile} />}>
           <Route path="/" element={<OfficeView />} />
+          <Route path="/living-office" element={<LivingOfficeView />} />
         </Route>
         <Route element={<ConsoleLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
