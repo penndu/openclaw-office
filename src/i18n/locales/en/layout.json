@@ -41,6 +41,8 @@
     "subAgents": "Sub-Agents",
     "agentDetail": "Agent Detail",
     "eventTimeline": "Event Timeline",
+    "livingOffice": "Living Office",
+    "livingOfficeBeta": "Beta",
     "searchPlaceholder": "Search agents...",
     "filters": {
       "all": "All",

@@ -223,7 +223,7 @@ export const useOfficeStore = create<OfficeStore>()(
     selectedAgentId: null,
     viewMode: "2d" as ViewMode,
     eventHistory: [],
-    sidebarCollapsed: false,
+    sidebarCollapsed: true,
     lastSessionsSnapshot: null,
     theme: getInitialTheme(),
     bloomEnabled: getInitialBloom(),

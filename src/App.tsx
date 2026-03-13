@@ -1,6 +1,6 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ConsoleLayout } from "@/components/layout/ConsoleLayout";
 import { LivingOfficeView } from "@/components/living-office/LivingOfficeView";
@@ -15,6 +15,7 @@ import type { PageId } from "@/gateway/types";
 import { useGatewayConnection } from "@/hooks/useGatewayConnection";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useOfficeStore } from "@/store/office-store";
+import { PerceptionEngineContext } from "@/components/living-office/hud/perception-context";
 
 const Scene3D = lazy(() => import("@/components/office-3d/Scene3D"));
 
@@ -30,10 +31,16 @@ function Scene3DFallback() {
   );
 }
 
+const LIVING_OFFICE_DISMISSED_KEY = "lo-hint-dismissed";
+
 function OfficeView() {
   const viewMode = useOfficeStore((s) => s.viewMode);
   const [fading, setFading] = useState(false);
   const [displayMode, setDisplayMode] = useState(viewMode);
+  const [showHint, setShowHint] = useState(
+    () => localStorage.getItem(LIVING_OFFICE_DISMISSED_KEY) !== "1",
+  );
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (viewMode !== displayMode) {
@@ -46,10 +53,15 @@ function OfficeView() {
     }
   }, [viewMode, displayMode]);
 
+  const dismissHint = useCallback(() => {
+    localStorage.setItem(LIVING_OFFICE_DISMISSED_KEY, "1");
+    setShowHint(false);
+  }, []);
+
   return (
     <div
       className="h-full w-full transition-opacity duration-300"
-      style={{ opacity: fading ? 0 : 1 }}
+      style={{ opacity: fading ? 0 : 1, position: "relative" }}
     >
       {displayMode === "2d" ? (
         <FloorPlan />
@@ -57,6 +69,63 @@ function OfficeView() {
         <Suspense fallback={<Scene3DFallback />}>
           <Scene3D />
         </Suspense>
+      )}
+      {showHint && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 56,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "6px 14px",
+            borderRadius: 10,
+            background: "rgba(139,92,246,0.9)",
+            backdropFilter: "blur(8px)",
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 500,
+            boxShadow: "0 4px 16px rgba(139,92,246,0.3)",
+            zIndex: 15,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span>✨ 体验新版 Living Office 2.5D 视图</span>
+          <button
+            type="button"
+            onClick={() => navigate("/living-office")}
+            style={{
+              padding: "2px 10px",
+              borderRadius: 6,
+              background: "rgba(255,255,255,0.2)",
+              border: "none",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            前往
+          </button>
+          <button
+            type="button"
+            onClick={dismissHint}
+            style={{
+              background: "none",
+              border: "none",
+              color: "rgba(255,255,255,0.6)",
+              cursor: "pointer",
+              fontSize: 14,
+              lineHeight: 1,
+              padding: "0 2px",
+            }}
+            title="不再显示"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );
@@ -110,7 +179,7 @@ export function App() {
   const { isMobile } = useResponsive();
   const setViewMode = useOfficeStore((s) => s.setViewMode);
 
-  const { wsClient } = useGatewayConnection({ url: gatewayUrl, token: gatewayToken });
+  const { wsClient, perceptionEngine } = useGatewayConnection({ url: gatewayUrl, token: gatewayToken });
 
   useEffect(() => {
     if (isMobile) {
@@ -119,7 +188,7 @@ export function App() {
   }, [isMobile, setViewMode]);
 
   return (
-    <>
+    <PerceptionEngineContext value={perceptionEngine}>
       <ThemeSync />
       <PageTracker />
       <Routes>
@@ -137,6 +206,6 @@ export function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </PerceptionEngineContext>
   );
 }

@@ -41,6 +41,8 @@
     "subAgents": "子智能体",
     "agentDetail": "智能体 详情",
     "eventTimeline": "事件时间轴",
+    "livingOffice": "Living Office",
+    "livingOfficeBeta": "Beta",
     "searchPlaceholder": "搜索 Agent...",
     "filters": {
       "all": "全部",

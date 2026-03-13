@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, beforeEach } from "vitest";
 import { Sidebar } from "@/components/layout/Sidebar";
 import i18n from "@/i18n/test-setup";
@@ -39,14 +40,14 @@ describe("Sidebar", () => {
   });
 
   it("renders all agents", () => {
-    render(<Sidebar />);
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
     expect(screen.getByText("Coder")).toBeInTheDocument();
     expect(screen.getByText("Reviewer")).toBeInTheDocument();
     expect(screen.getByText("Writer")).toBeInTheDocument();
   });
 
   it("search filters agents by name", () => {
-    render(<Sidebar />);
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
     const searchInput = screen.getByPlaceholderText(t("layout:sidebar.searchPlaceholder"));
     fireEvent.change(searchInput, { target: { value: "cod" } });
     expect(screen.getByText("Coder")).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe("Sidebar", () => {
       data: { phase: "start" },
     });
 
-    render(<Sidebar />);
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
     const searchSection = screen.getByPlaceholderText(
       t("layout:sidebar.searchPlaceholder"),
     ).parentElement;

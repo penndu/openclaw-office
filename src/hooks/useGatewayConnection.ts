@@ -161,7 +161,7 @@ export function useGatewayConnection({ url, token }: UseGatewayConnectionOptions
   useSubAgentPoller(rpcRef);
   useUsagePoller(rpcRef);
 
-  return { wsClient: wsRef, rpcClient: rpcRef };
+  return { wsClient: wsRef, rpcClient: rpcRef, perceptionEngine: perceptionRef };
 }
 
 function healthAgentsToSummaries(health: HealthSnapshot): AgentSummary[] {
