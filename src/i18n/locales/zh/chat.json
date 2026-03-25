@@ -45,11 +45,18 @@
   },
   "message": {
     "assistant": "助手",
+    "hideDetails": "收起",
     "pin": "置顶",
     "pinned": "已置顶",
-    "you": "你"
+    "result": "结果",
+    "toolArgs": "参数",
+    "toolCall": "工具调用",
+    "you": "你",
+    "viewDetails": "展开"
   },
   "toolStatus": {
+    "error": "失败",
+    "pending": "等待中",
     "running": "执行中",
     "done": "已完成"
   },

@@ -22,18 +22,19 @@ export function ChatWorkspaceBootstrap({ wsClient }: ChatWorkspaceBootstrapProps
   }, [connectionStatus, wsClient, initEventListeners]);
 
   useEffect(() => {
-    if (connectionStatus !== "connected" || agents.size === 0) {
+    if (connectionStatus !== "connected") {
       return;
     }
     const currentTarget = useChatDockStore.getState().targetAgentId;
     if (currentTarget) {
       return;
     }
-    const mainAgent = Array.from(agents.values()).find((agent) => !agent.isSubAgent);
-    if (mainAgent) {
-      setTargetAgent(mainAgent.id);
-    }
-  }, [connectionStatus, agents, setTargetAgent]);
+    const preferredAgentId =
+      selectedAgentId && !agents.get(selectedAgentId)?.isSubAgent
+        ? selectedAgentId
+        : Array.from(agents.values()).find((agent) => !agent.isSubAgent)?.id ?? "main";
+    setTargetAgent(preferredAgentId);
+  }, [connectionStatus, agents, selectedAgentId, setTargetAgent]);
 
   useEffect(() => {
     if (!selectedAgentId) return;

@@ -14,6 +14,7 @@ vi.stubGlobal(
 );
 
 function resetChatStore() {
+  localStorage.removeItem("openclaw-office-chat-page:last-session");
   const state = useChatDockStore.getState();
   useChatDockStore.setState({
     ...state,
@@ -122,7 +123,7 @@ describe("ChatPage", () => {
 
     await waitFor(() => {
       expect(useChatDockStore.getState().targetAgentId).toBe("coder");
-      expect(useChatDockStore.getState().currentSessionKey).toBe("agent:coder:main");
+      expect(useChatDockStore.getState().currentSessionKey).toMatch(/^agent:coder:session-\d+$/u);
     });
   });
 
@@ -136,7 +137,15 @@ describe("ChatPage", () => {
 
   it("pins a message into the pinned strip", async () => {
     useChatDockStore.setState({
-      messages: [{ id: "1", role: "assistant", content: "pin me please", timestamp: 1 }],
+      messages: [
+        {
+          id: "1",
+          role: "assistant",
+          content: "pin me please",
+          timestamp: 1,
+          authorAgentId: "main",
+        },
+      ],
     });
 
     await act(async () => {
@@ -148,5 +157,21 @@ describe("ChatPage", () => {
       expect(screen.getAllByText("已置顶").length).toBeGreaterThan(0);
       expect(screen.getByRole("button", { name: /pin me please/i })).toBeInTheDocument();
     });
+  });
+
+  it("renders speaker labels for user and assistant messages", async () => {
+    useChatDockStore.setState({
+      messages: [
+        { id: "user-1", role: "user", content: "hello", timestamp: 1 },
+        { id: "assistant-1", role: "assistant", content: "hi", timestamp: 2, authorAgentId: "main" },
+      ],
+    });
+
+    await act(async () => {
+      render(<ChatPage />);
+    });
+
+    expect(screen.getAllByText("你").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("CEO").length).toBeGreaterThan(0);
   });
 });

@@ -36,6 +36,7 @@ export interface ChatDockMessage {
   kind?: ChatMessageKind;
   runId?: string | null;
   aborted?: boolean;
+  authorAgentId?: string | null;
 }
 
 interface ChatDockState {
@@ -92,6 +93,35 @@ function buildSessionKey(agentId: string): string {
 }
 
 const SESSION_LIST_CACHE_MAX_AGE_MS = 60_000;
+const CHAT_PAGE_LAST_SESSION_KEY = "openclaw-office-chat-page:last-session";
+
+function isWorkspaceChatSessionKey(sessionKey: string): boolean {
+  return /^agent:[^:]+:(main|session-[^:]+)$/u.test(sessionKey);
+}
+
+function filterWorkspaceSessions(sessions: SessionInfo[]): SessionInfo[] {
+  return sessions.filter((session) => isWorkspaceChatSessionKey(session.key));
+}
+
+function getStoredWorkspaceSessionKey(): string | null {
+  try {
+    const value = localStorage.getItem(CHAT_PAGE_LAST_SESSION_KEY);
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeWorkspaceSessionKey(sessionKey: string): void {
+  if (!isWorkspaceChatSessionKey(sessionKey)) {
+    return;
+  }
+  try {
+    localStorage.setItem(CHAT_PAGE_LAST_SESSION_KEY, sessionKey);
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
 
 function inferAgentIdFromSessionKey(sessionKey: string): string | null {
   const match = /^agent:([^:]+):/u.exec(sessionKey);
@@ -104,8 +134,9 @@ function resolveSessionAgentId(sessionKey: string, sessions: SessionInfo[]): str
 }
 
 function selectPreferredSessionKey(agentId: string, sessions: SessionInfo[]): string {
-  const matched = sessions
+  const matched = filterWorkspaceSessions(sessions)
     .filter((session) => resolveSessionAgentId(session.key, sessions) === agentId)
+    .filter((session) => session.key !== buildSessionKey(agentId))
     .sort((a, b) => {
       const aTime = a.lastActiveAt ?? a.updatedAt ?? a.createdAt ?? 0;
       const bTime = b.lastActiveAt ?? b.updatedAt ?? b.createdAt ?? 0;
@@ -119,6 +150,10 @@ function mergeCurrentSession(
   currentSessionKey: string,
   targetAgentId: string | null,
 ): SessionInfo[] {
+  const isBootstrapDefaultSession = currentSessionKey === "agent:main:main" && targetAgentId === null;
+  if (isBootstrapDefaultSession) {
+    return sessions;
+  }
   if (sessions.some((session) => session.key === currentSessionKey)) {
     return sessions;
   }
@@ -249,6 +284,30 @@ function normalizeHistoryMessage(message: Record<string, unknown>): ChatDockMess
     runId: typeof message.runId === "string" ? message.runId : null,
     aborted: Boolean(message.aborted),
   };
+}
+
+function normalizeHistoryMessages(
+  messages: Record<string, unknown>[],
+  authorAgentId: string | null,
+): ChatDockMessage[] {
+  return messages.map((message) => {
+    const normalized = normalizeHistoryMessage(message);
+    return normalized.role === "assistant" ? { ...normalized, authorAgentId } : normalized;
+  });
+}
+
+function findLatestToolMessageIndex(messages: ChatDockMessage[], runId: string, toolName: string): number {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (
+      message?.kind === "tool" &&
+      message.runId === runId &&
+      message.toolCalls?.some((toolCall) => toolCall.name === toolName)
+    ) {
+      return index;
+    }
+  }
+  return -1;
 }
 
 function normalizeSession(session: SessionInfo): SessionInfo {
@@ -575,6 +634,7 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
 
   switchSession: (key) => {
     const targetAgentId = resolveSessionAgentId(key, get().sessions);
+    storeWorkspaceSessionKey(key);
     set({
       currentSessionKey: key,
       targetAgentId,
@@ -621,6 +681,7 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       thinkingLevel: null,
       sessions,
     });
+    storeWorkspaceSessionKey(newKey);
     void localPersistence.clearMessages(newKey);
     persistSessions(sessions);
   },
@@ -629,8 +690,9 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     const current = get();
     const cached = await localPersistence.getSessions();
     if (cached.sessions.length > 0) {
+      const normalizedCached = filterWorkspaceSessions(cached.sessions.map(normalizeSession));
       set({
-        sessions: mergeCurrentSession(cached.sessions.map(normalizeSession), current.currentSessionKey, current.targetAgentId),
+        sessions: mergeCurrentSession(normalizedCached, current.currentSessionKey, current.targetAgentId),
       });
       if (cached.cachedAt && Date.now() - cached.cachedAt < SESSION_LIST_CACHE_MAX_AGE_MS) {
         return;
@@ -639,7 +701,7 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
 
     try {
       const result = await withAdapter((adapter) => adapter.sessionsList());
-      const normalized = result.map(normalizeSession);
+      const normalized = filterWorkspaceSessions(result.map(normalizeSession));
       const merged = mergeCurrentSession(normalized, get().currentSessionKey, get().targetAgentId);
       set({ sessions: merged });
       persistSessions(merged);
@@ -652,8 +714,10 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     const { currentSessionKey } = get();
     try {
       const result = await withAdapter((adapter) => adapter.chatHistory(currentSessionKey));
-      const messages = result.messages.map((message) =>
-        normalizeHistoryMessage(message as unknown as Record<string, unknown>),
+      const authorAgentId = resolveSessionAgentId(currentSessionKey, get().sessions) ?? get().targetAgentId;
+      const messages = normalizeHistoryMessages(
+        result.messages as unknown as Record<string, unknown>[],
+        authorAgentId,
       );
       const nextSessions = touchSession(get().sessions, currentSessionKey, get().targetAgentId, messages.length);
       set({ messages, thinkingLevel: result.thinkingLevel ?? null, sessions: nextSessions });
@@ -668,11 +732,37 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     const { currentSessionKey } = get();
     set({ isHistoryLoading: true });
     try {
+      const cached = await localPersistence.getMessages(currentSessionKey);
+      if (cached.length > 0) {
+        const nextSessions = touchSession(get().sessions, currentSessionKey, get().targetAgentId, cached.length);
+        set({
+          messages: cached,
+          sessions: nextSessions,
+          isHistoryLoaded: true,
+          isHistoryLoading: false,
+        });
+        persistSessions(nextSessions);
+        return;
+      }
+
+      const activeSession = get().sessions.find((session) => session.key === currentSessionKey);
+      if (activeSession && (activeSession.messageCount ?? 0) === 0) {
+        set({
+          messages: [],
+          isHistoryLoaded: true,
+          isHistoryLoading: false,
+          thinkingLevel: activeSession?.thinkingLevel ?? null,
+        });
+        return;
+      }
+
       const result: ChatHistoryResult = await withAdapter((adapter) =>
         adapter.chatHistory(currentSessionKey),
       );
-      const messages = result.messages.map((message) =>
-        normalizeHistoryMessage(message as unknown as Record<string, unknown>),
+      const authorAgentId = resolveSessionAgentId(currentSessionKey, get().sessions) ?? get().targetAgentId;
+      const messages = normalizeHistoryMessages(
+        result.messages as unknown as Record<string, unknown>[],
+        authorAgentId,
       );
       const nextSessions = touchSession(get().sessions, currentSessionKey, get().targetAgentId, messages.length);
       set({
@@ -695,7 +785,19 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
   },
 
   setTargetAgent: (agentId) => {
-    const sessionKey = selectPreferredSessionKey(agentId, get().sessions);
+    const storedSessionKey = getStoredWorkspaceSessionKey();
+    const storedAgentId =
+      storedSessionKey && isWorkspaceChatSessionKey(storedSessionKey)
+        ? resolveSessionAgentId(storedSessionKey, get().sessions)
+        : null;
+    const sessionKey =
+      storedSessionKey && storedAgentId === agentId ? storedSessionKey : selectPreferredSessionKey(agentId, get().sessions);
+    if (sessionKey === buildSessionKey(agentId)) {
+      get().newSession(agentId);
+      return;
+    }
+
+    storeWorkspaceSessionKey(sessionKey);
     set({
       targetAgentId: agentId,
       currentSessionKey: sessionKey,
@@ -757,6 +859,8 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
               : undefined,
             runId: runId || null,
             aborted: Boolean(message?.aborted),
+            authorAgentId:
+              resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId,
           };
           const nextSessions = touchSession(
             get().sessions,
@@ -832,35 +936,57 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     const name = typeof event.data.name === "string" ? event.data.name : "unknown";
     const args = event.data.args as Record<string, unknown> | undefined;
     const toolCallStatus = phase === "start" ? "running" : "done";
-    const systemMessage: ChatDockMessage =
-      phase === "start"
-        ? {
-            ...buildSystemMessage(i18n.t("chat:toolActivity.calling", { name }), "tool"),
+    const authorAgentId =
+      resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId;
+    const toolCall: ToolCallInfo = {
+      id: `${event.runId}:${event.seq}`,
+      name,
+      args,
+      status: toolCallStatus,
+    };
+
+    set((state) => {
+      const existingIndex = findLatestToolMessageIndex(state.messages, event.runId, name);
+      if (existingIndex >= 0) {
+        const nextMessages = [...state.messages];
+        const existing = nextMessages[existingIndex]!;
+        nextMessages[existingIndex] = {
+          ...existing,
+          content:
+            phase === "start"
+              ? i18n.t("chat:toolActivity.calling", { name })
+              : i18n.t("chat:toolActivity.finished", { name }),
+          timestamp: Date.now(),
+          toolCalls: (existing.toolCalls ?? []).map((existingToolCall) =>
+            existingToolCall.name === name
+              ? {
+                  ...existingToolCall,
+                  args: args ?? existingToolCall.args,
+                  status: toolCallStatus,
+                }
+              : existingToolCall,
+          ),
+        };
+        return { messages: nextMessages };
+      }
+
+      return {
+        messages: [
+          ...state.messages,
+          {
+            ...buildSystemMessage(
+              phase === "start"
+                ? i18n.t("chat:toolActivity.calling", { name })
+                : i18n.t("chat:toolActivity.finished", { name }),
+              "tool",
+            ),
+            authorAgentId,
             runId: event.runId,
-            toolCalls: [
-              {
-                id: `${event.runId}:${event.seq}`,
-                name,
-                args,
-                status: toolCallStatus,
-              },
-            ],
-          }
-        : {
-            ...buildSystemMessage(i18n.t("chat:toolActivity.finished", { name }), "tool"),
-            runId: event.runId,
-            toolCalls: [
-              {
-                id: `${event.runId}:${event.seq}`,
-                name,
-                args,
-                status: toolCallStatus,
-              },
-            ],
-          };
-    set((state) => ({
-      messages: [...state.messages, systemMessage],
-    }));
+            toolCalls: [toolCall],
+          },
+        ],
+      };
+    });
   },
 
   clearError: () => set({ error: null }),

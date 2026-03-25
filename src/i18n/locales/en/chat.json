@@ -45,11 +45,18 @@
   },
   "message": {
     "assistant": "Assistant",
+    "hideDetails": "Hide",
     "pin": "Pin",
     "pinned": "Pinned",
-    "you": "You"
+    "result": "Result",
+    "toolArgs": "Args",
+    "toolCall": "Tool call",
+    "you": "You",
+    "viewDetails": "Details"
   },
   "toolStatus": {
+    "error": "Error",
+    "pending": "Pending",
     "running": "Running",
     "done": "Done"
   },

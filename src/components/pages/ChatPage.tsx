@@ -17,9 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TextareaAutosize from "react-textarea-autosize";
 import { AgentSelector } from "@/components/chat/AgentSelector";
-import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { StreamingIndicator } from "@/components/chat/StreamingIndicator";
 import { getSlashCommands } from "@/lib/chat-slash-commands";
 import { useChatDockStore } from "@/store/console-stores/chat-dock-store";
 import { useOfficeStore } from "@/store/office-store";
@@ -95,7 +93,6 @@ export function ChatPage() {
   const error = useChatDockStore((s) => s.error);
   const clearError = useChatDockStore((s) => s.clearError);
   const loadSessions = useChatDockStore((s) => s.loadSessions);
-  const initializeHistory = useChatDockStore((s) => s.initializeHistory);
   const sendMessage = useChatDockStore((s) => s.sendMessage);
   const abort = useChatDockStore((s) => s.abort);
   const currentSessionKey = useChatDockStore((s) => s.currentSessionKey);
@@ -127,10 +124,6 @@ export function ChatPage() {
   useEffect(() => {
     void loadSessions();
   }, [loadSessions]);
-
-  useEffect(() => {
-    void initializeHistory();
-  }, [initializeHistory, currentSessionKey]);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -384,19 +377,21 @@ export function ChatPage() {
                       </div>
                     ))}
                     {isStreaming && streamingText && (
-                      <div className="mb-5">
-                        <div className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
-                          <MarkdownContent content={streamingText} />
-                          <StreamingIndicator />
-                        </div>
-                      </div>
+                      <MessageBubble
+                        message={{
+                          id: "__streaming__",
+                          role: "assistant",
+                          content: streamingText,
+                          timestamp: Date.now(),
+                          isStreaming: true,
+                          authorAgentId: targetAgentId,
+                        }}
+                      />
                     )}
                     {isStreaming && !streamingText && (
-                      <div className="mb-5">
-                        <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>{t("dock.thinkingStatus")}</span>
-                        </div>
+                      <div className="mb-5 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>{t("dock.thinkingStatus")}</span>
                       </div>
                     )}
                   </>

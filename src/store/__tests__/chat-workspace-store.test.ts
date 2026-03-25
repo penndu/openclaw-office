@@ -4,6 +4,7 @@ import { localPersistence } from "@/lib/local-persistence";
 import { useChatDockStore } from "../console-stores/chat-dock-store";
 
 function resetChatStore() {
+  localStorage.removeItem("openclaw-office-chat-page:last-session");
   useChatDockStore.setState({
     messages: [],
     isStreaming: false,
@@ -99,6 +100,35 @@ describe("Chat workspace store", () => {
     expect(state.currentSessionKey).toBe("agent:coder:session-new");
   });
 
+  it("creates a fresh workspace session when only main or channel sessions exist", () => {
+    useChatDockStore.setState({
+      sessions: [
+        {
+          key: "agent:coder:main",
+          agentId: "coder",
+          label: "main",
+          createdAt: 1,
+          lastActiveAt: 10,
+          messageCount: 200,
+        },
+        {
+          key: "agent:coder:feishu:direct:test-user",
+          agentId: "coder",
+          label: "channel",
+          createdAt: 2,
+          lastActiveAt: 20,
+          messageCount: 3,
+        },
+      ],
+    });
+
+    useChatDockStore.getState().setTargetAgent("coder");
+
+    const state = useChatDockStore.getState();
+    expect(state.targetAgentId).toBe("coder");
+    expect(state.currentSessionKey).toMatch(/^agent:coder:session-\d+$/u);
+  });
+
   it("uses cached session history before hitting gateway", async () => {
     vi.spyOn(localPersistence, "getSessions").mockResolvedValue({
       sessions: [
@@ -121,6 +151,24 @@ describe("Chat workspace store", () => {
     expect(useChatDockStore.getState().sessions[0]?.label).toBe("cached");
   });
 
+  it("uses cached message history before hitting gateway", async () => {
+    vi.spyOn(localPersistence, "getMessages").mockResolvedValue([
+      {
+        id: "cached-1",
+        role: "assistant",
+        content: "cached reply",
+        timestamp: 123,
+        authorAgentId: "main",
+      },
+    ]);
+    const historySpy = vi.spyOn(getAdapter(), "chatHistory");
+
+    await useChatDockStore.getState().initializeHistory();
+
+    expect(historySpy).not.toHaveBeenCalled();
+    expect(useChatDockStore.getState().messages[0]?.content).toBe("cached reply");
+  });
+
   it("queues outbound messages while streaming", async () => {
     useChatDockStore.setState({ isStreaming: true });
     await useChatDockStore.getState().sendMessage("queued while busy");
@@ -136,7 +184,7 @@ describe("Chat workspace store", () => {
     expect(state.messages.at(-1)?.content).toContain("专注模式");
   });
 
-  it("records tool activity from agent events", () => {
+  it("records tool activity from agent events as a single collapsible item", () => {
     useChatDockStore.getState().handleAgentEvent({
       runId: "run-1",
       seq: 1,
@@ -145,8 +193,19 @@ describe("Chat workspace store", () => {
       sessionKey: "agent:main:main",
       data: { phase: "start", name: "mock_search", args: { query: "hello" } },
     });
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "run-1",
+      seq: 2,
+      stream: "tool",
+      ts: Date.now(),
+      sessionKey: "agent:main:main",
+      data: { phase: "end", name: "mock_search" },
+    });
+
     const state = useChatDockStore.getState();
+    expect(state.messages).toHaveLength(1);
     expect(state.messages.at(-1)?.kind).toBe("tool");
     expect(state.messages.at(-1)?.toolCalls?.[0]?.name).toBe("mock_search");
+    expect(state.messages.at(-1)?.toolCalls?.[0]?.status).toBe("done");
   });
 });

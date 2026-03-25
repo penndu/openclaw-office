@@ -4,10 +4,8 @@ import { useTranslation } from "react-i18next";
 import TextareaAutosize from "react-textarea-autosize";
 import { useChatDockStore, type ChatDockMessage } from "@/store/console-stores/chat-dock-store";
 import { AgentSelector } from "./AgentSelector";
-import { MarkdownContent } from "./MarkdownContent";
 import { MessageBubble } from "./MessageBubble";
 import { SessionSwitcher } from "./SessionSwitcher";
-import { StreamingIndicator } from "./StreamingIndicator";
 
 const MIN_HEIGHT = 220;
 const MAX_HEIGHT_RATIO = 0.7;
@@ -52,6 +50,7 @@ export function ChatDialog() {
   const abort = useChatDockStore((s) => s.abort);
   const error = useChatDockStore((s) => s.error);
   const clearError = useChatDockStore((s) => s.clearError);
+  const targetAgentId = useChatDockStore((s) => s.targetAgentId);
   const draft = useChatDockStore((s) => s.draft);
   const setDraft = useChatDockStore((s) => s.setDraft);
   const attachments = useChatDockStore((s) => s.attachments);
@@ -274,12 +273,16 @@ export function ChatDialog() {
               <MessageBubble key={msg.id} message={msg} />
             ))}
             {isStreaming && streamingText && (
-              <div className="mb-3 flex justify-start">
-                <div className="max-w-[80%] rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-                  <MarkdownContent content={streamingText} />
-                  <StreamingIndicator />
-                </div>
-              </div>
+              <MessageBubble
+                message={{
+                  id: "__streaming__",
+                  role: "assistant",
+                  content: streamingText,
+                  timestamp: Date.now(),
+                  isStreaming: true,
+                  authorAgentId: targetAgentId,
+                }}
+              />
             )}
             {isStreaming && !streamingText && (
               <div className="mb-3 flex justify-start">
