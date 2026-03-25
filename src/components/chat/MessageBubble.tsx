@@ -51,14 +51,39 @@ function PinButton({
   );
 }
 
-function ToolActivityBubble({ message }: { message: ChatDockMessage }) {
+function AssistantIdentity({
+  authorName,
+  authorAgentId,
+}: {
+  authorName: string;
+  authorAgentId: string | null | undefined;
+}) {
+  return (
+    <>
+      <SvgAvatar agentId={authorAgentId ?? "openclaw"} size={32} className="shrink-0" />
+      <div className="min-w-0">
+        <div className="mb-1 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+          <span className="font-medium text-gray-500 dark:text-gray-400">{authorName}</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ToolActivityBubble({
+  message,
+  authorName,
+}: {
+  message: ChatDockMessage;
+  authorName: string;
+}) {
   const { t } = useTranslation("chat");
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(!message.collapsed);
   const toolCall = message.toolCalls?.[0];
 
   useEffect(() => {
-    setIsExpanded(toolCall?.status === "running");
-  }, [toolCall?.status]);
+    setIsExpanded(toolCall?.status === "running" || !message.collapsed);
+  }, [message.collapsed, toolCall?.status]);
 
   if (!toolCall) {
     return null;
@@ -72,53 +97,59 @@ function ToolActivityBubble({ message }: { message: ChatDockMessage }) {
         : "border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300";
 
   return (
-    <div className="mb-4 flex justify-end">
-      <div className={`w-full max-w-sm rounded-xl border px-3 py-2 shadow-sm ${statusClass}`}>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide opacity-70">
-              <span>{t("message.toolCall")}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  toolCall.status === "running"
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
-                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300"
-                }`}
-              >
-                {t(`toolStatus.${toolCall.status}`, { defaultValue: toolCall.status })}
-              </span>
-            </div>
-            <div className="mt-1 truncate font-mono text-sm">{toolCall.name}</div>
-          </div>
-          <span className="text-xs opacity-70">
-            {isExpanded ? t("message.hideDetails") : t("message.viewDetails")}
-          </span>
-        </button>
+    <div className="group mb-6 flex justify-start">
+      <div className="flex max-w-[90%] items-start gap-3">
+        <AssistantIdentity authorName={authorName} authorAgentId={message.authorAgentId} />
 
-        {isExpanded && (
-          <div className="mt-3 space-y-2 border-t border-current/10 pt-3 text-xs">
-            {toolCall.args && (
-              <div>
-                <div className="mb-1 font-medium opacity-70">{t("message.toolArgs")}</div>
-                <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-black/5 p-2 dark:bg-white/5">
-                  {JSON.stringify(toolCall.args, null, 2)}
-                </pre>
+        <div className="min-w-0 flex-1">
+          <div className={`w-full max-w-md rounded-xl border px-3 py-2 shadow-sm ${statusClass}`}>
+            <button
+              type="button"
+              onClick={() => setIsExpanded((current) => !current)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide opacity-70">
+                  <span>{t("message.toolCall")}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      toolCall.status === "running"
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
+                  >
+                    {t(`toolStatus.${toolCall.status}`, { defaultValue: toolCall.status })}
+                  </span>
+                </div>
+                <div className="mt-1 truncate font-mono text-sm">{toolCall.name}</div>
               </div>
-            )}
-            {toolCall.result && (
-              <div>
-                <div className="mb-1 font-medium opacity-70">{t("message.result")}</div>
-                <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-black/5 p-2 dark:bg-white/5">
-                  {toolCall.result}
-                </pre>
+              <span className="text-xs opacity-70">
+                {isExpanded ? t("message.hideDetails") : t("message.viewDetails")}
+              </span>
+            </button>
+
+            {isExpanded && (
+              <div className="mt-3 space-y-2 border-t border-current/10 pt-3 text-xs">
+                {toolCall.args && (
+                  <div>
+                    <div className="mb-1 font-medium opacity-70">{t("message.toolArgs")}</div>
+                    <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-black/5 p-2 dark:bg-white/5">
+                      {JSON.stringify(toolCall.args, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {toolCall.result && (
+                  <div>
+                    <div className="mb-1 font-medium opacity-70">{t("message.result")}</div>
+                    <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-black/5 p-2 dark:bg-white/5">
+                      {toolCall.result}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -134,9 +165,10 @@ export const MessageBubble = memo(function MessageBubble({
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
   const hasImages = (message.attachments ?? []).some((attachment) => attachment.dataUrl);
+  const authorName = isUser ? t("message.you") : resolveAssistantName(message, agents);
 
   if (message.kind === "tool") {
-    return <ToolActivityBubble message={message} />;
+    return <ToolActivityBubble message={message} authorName={authorName} />;
   }
 
   if (isSystem) {
@@ -151,8 +183,6 @@ export const MessageBubble = memo(function MessageBubble({
       </div>
     );
   }
-
-  const authorName = isUser ? t("message.you") : resolveAssistantName(message, agents);
 
   return (
     <div className={`group mb-6 flex ${isUser ? "justify-end" : "justify-start"}`}>

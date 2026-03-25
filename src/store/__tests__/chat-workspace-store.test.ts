@@ -208,4 +208,53 @@ describe("Chat workspace store", () => {
     expect(state.messages.at(-1)?.toolCalls?.[0]?.name).toBe("mock_search");
     expect(state.messages.at(-1)?.toolCalls?.[0]?.status).toBe("done");
   });
+
+  it("embeds tool activity between assistant text segments in time order", () => {
+    useChatDockStore.getState().handleChatEvent({
+      state: "delta",
+      runId: "run-seq",
+      message: {
+        role: "assistant",
+        content: "先看一下仓库结构",
+      },
+    });
+
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "run-seq",
+      seq: 1,
+      stream: "tool",
+      ts: Date.now(),
+      sessionKey: "agent:main:main",
+      data: { phase: "start", name: "read", args: { path: "README.md" } },
+    });
+
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "run-seq",
+      seq: 2,
+      stream: "tool",
+      ts: Date.now(),
+      sessionKey: "agent:main:main",
+      data: { phase: "end", name: "read" },
+    });
+
+    useChatDockStore.getState().handleChatEvent({
+      state: "final",
+      runId: "run-seq",
+      message: {
+        id: "assistant-final",
+        role: "assistant",
+        content: "先看一下仓库结构\n\n接着给出修改建议",
+        stopReason: "end_turn",
+      },
+    });
+
+    const state = useChatDockStore.getState();
+    expect(state.messages).toHaveLength(3);
+    expect(state.messages[0]?.role).toBe("assistant");
+    expect(state.messages[0]?.content).toContain("先看一下仓库结构");
+    expect(state.messages[1]?.kind).toBe("tool");
+    expect(state.messages[1]?.toolCalls?.[0]?.status).toBe("done");
+    expect(state.messages[2]?.role).toBe("assistant");
+    expect(state.messages[2]?.content).toContain("接着给出修改建议");
+  });
 });

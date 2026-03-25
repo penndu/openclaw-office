@@ -37,6 +37,7 @@ export interface ChatDockMessage {
   runId?: string | null;
   aborted?: boolean;
   authorAgentId?: string | null;
+  collapsed?: boolean;
 }
 
 interface ChatDockState {
@@ -308,6 +309,58 @@ function findLatestToolMessageIndex(messages: ChatDockMessage[], runId: string, 
     }
   }
   return -1;
+}
+
+function buildAssistantMessage(
+  content: string,
+  runId: string | null,
+  authorAgentId: string | null,
+  source?: Record<string, unknown>,
+): ChatDockMessage {
+  return {
+    id: String(source?.id ?? generateMessageId()),
+    role: "assistant",
+    content,
+    timestamp: Date.now(),
+    attachments: source ? extractAttachments(source) : undefined,
+    toolCalls: Array.isArray(source?.toolCalls) ? (source.toolCalls as ToolCallInfo[]) : undefined,
+    runId,
+    aborted: Boolean(source?.aborted),
+    authorAgentId,
+  };
+}
+
+function getAssistantRunContent(messages: ChatDockMessage[], runId: string): string {
+  return messages
+    .filter((message) => message.role === "assistant" && message.runId === runId)
+    .map((message) => message.content)
+    .join("\n");
+}
+
+function appendAssistantSegment(
+  messages: ChatDockMessage[],
+  content: string,
+  runId: string | null,
+  authorAgentId: string | null,
+  source?: Record<string, unknown>,
+): ChatDockMessage[] {
+  if (!content.trim()) {
+    return messages;
+  }
+
+  if (runId) {
+    const existingContent = getAssistantRunContent(messages, runId);
+    const normalizedContent =
+      existingContent && content.startsWith(existingContent)
+        ? content.slice(existingContent.length).replace(/^\n+/u, "")
+        : content;
+    if (!normalizedContent.trim()) {
+      return messages;
+    }
+    return [...messages, buildAssistantMessage(normalizedContent, runId, authorAgentId, source)];
+  }
+
+  return [...messages, buildAssistantMessage(content, runId, authorAgentId, source)];
 }
 
 function normalizeSession(session: SessionInfo): SessionInfo {
@@ -848,20 +901,8 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       case "final": {
         const assistantText = message ? extractText(message.content ?? message.text ?? "") : "";
         if (assistantText) {
-          const assistantMsg: ChatDockMessage = {
-            id: String(message?.id ?? generateMessageId()),
-            role: "assistant",
-            content: assistantText,
-            timestamp: Date.now(),
-            attachments: message ? extractAttachments(message) : undefined,
-            toolCalls: Array.isArray(message?.toolCalls)
-              ? (message.toolCalls as ToolCallInfo[])
-              : undefined,
-            runId: runId || null,
-            aborted: Boolean(message?.aborted),
-            authorAgentId:
-              resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId,
-          };
+          const authorAgentId =
+            resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId;
           const nextSessions = touchSession(
             get().sessions,
             get().currentSessionKey,
@@ -869,14 +910,20 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
             get().messages.length + 1,
           );
           set((state) => ({
-            messages: [...state.messages, assistantMsg],
+            messages: appendAssistantSegment(
+              state.messages,
+              assistantText,
+              runId || null,
+              authorAgentId,
+              message,
+            ),
             sessions: nextSessions,
             isStreaming: false,
             streamingMessage: null,
             activeRunId: null,
           }));
-          const { currentSessionKey } = get();
-          localPersistence.saveMessage(currentSessionKey, assistantMsg).catch(() => {});
+          const { currentSessionKey, messages } = get();
+          void localPersistence.saveMessages(currentSessionKey, messages);
           persistSessions(nextSessions);
         } else {
           set({
@@ -946,17 +993,31 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     };
 
     set((state) => {
-      const existingIndex = findLatestToolMessageIndex(state.messages, event.runId, name);
+      const currentStreamingText = extractText(
+        state.streamingMessage?.content ?? state.streamingMessage?.text ?? "",
+      );
+      const nextMessages =
+        phase === "start"
+          ? appendAssistantSegment(
+              state.messages,
+              currentStreamingText,
+              state.activeRunId ?? event.runId,
+              authorAgentId,
+              state.streamingMessage ?? undefined,
+            )
+          : [...state.messages];
+      const existingIndex = findLatestToolMessageIndex(nextMessages, event.runId, name);
       if (existingIndex >= 0) {
-        const nextMessages = [...state.messages];
-        const existing = nextMessages[existingIndex]!;
-        nextMessages[existingIndex] = {
+        const mergedMessages = [...nextMessages];
+        const existing = mergedMessages[existingIndex]!;
+        mergedMessages[existingIndex] = {
           ...existing,
           content:
             phase === "start"
               ? i18n.t("chat:toolActivity.calling", { name })
               : i18n.t("chat:toolActivity.finished", { name }),
           timestamp: Date.now(),
+          collapsed: toolCallStatus !== "running",
           toolCalls: (existing.toolCalls ?? []).map((existingToolCall) =>
             existingToolCall.name === name
               ? {
@@ -967,12 +1028,15 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
               : existingToolCall,
           ),
         };
-        return { messages: nextMessages };
+        return {
+          messages: mergedMessages,
+          streamingMessage: phase === "start" ? null : state.streamingMessage,
+        };
       }
 
       return {
         messages: [
-          ...state.messages,
+          ...nextMessages,
           {
             ...buildSystemMessage(
               phase === "start"
@@ -982,11 +1046,14 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
             ),
             authorAgentId,
             runId: event.runId,
+            collapsed: toolCallStatus !== "running",
             toolCalls: [toolCall],
           },
         ],
+        streamingMessage: phase === "start" ? null : state.streamingMessage,
       };
     });
+    void localPersistence.saveMessages(get().currentSessionKey, get().messages);
   },
 
   clearError: () => set({ error: null }),
