@@ -22,9 +22,11 @@ import type {
   TokenSnapshot,
   VisualAgent,
 } from "@/gateway/types";
+import { detectPeerAgentHintsFromAssistantText } from "@/lib/assistant-collaboration-hints";
 import { ZONES, CORRIDOR_ENTRANCE, A2A_TOOL_NAMES } from "@/lib/constants";
 import { extractSessionNamespace, extractAgentIdFromSessionKey } from "@/lib/session-key-utils";
-import { allocatePosition, calculateLoungePositions } from "@/lib/position-allocator";
+import { allocatePosition, allocateMeetingPositions, calculateLoungePositions } from "@/lib/position-allocator";
+import { fuzzyMatchAgentIds } from "@/lib/fuzzy-match";
 import {
   planWalkPath,
   calculateWalkDuration,
@@ -962,6 +964,22 @@ export const useOfficeStore = create<OfficeStore>()(
           }
         }
 
+        if (event.stream === "assistant" && !isSubAgentSession) {
+          const assistantText =
+            (typeof event.data.text === "string" && event.data.text) ||
+            (typeof event.data.delta === "string" && event.data.delta) ||
+            "";
+          const hintedPeerIds = detectPeerAgentHintsFromAssistantText(
+            assistantText,
+            agentId,
+            state.agents.values(),
+          );
+          if (hintedPeerIds.length >= 2) {
+            createPeerCollaborationLinksForAgents(state, hintedPeerIds);
+            scheduleMeetingGathering();
+          }
+        }
+
         const agent = state.agents.get(agentId);
         if (agent) {
           const prevStatus = agent.status;
@@ -1179,6 +1197,67 @@ export const useOfficeStore = create<OfficeStore>()(
         state.globalMetrics = computeMetrics(state.agents, state.globalMetrics);
       });
     },
+
+    requestMeeting: (agentIds: string[]) => {
+      const currentState = useOfficeStore.getState();
+      const allIds = Array.from(currentState.agents.entries())
+        .filter(([, a]) => !a.isPlaceholder && a.confirmed)
+        .map(([id]) => id);
+
+      const matched = fuzzyMatchAgentIds(agentIds, allIds, "requestMeeting");
+      const toMove = matched.filter((id) => {
+        const a = currentState.agents.get(id);
+        return a && a.zone !== "meeting" && a.movement?.toZone !== "meeting";
+      });
+
+      if (toMove.length === 0) return;
+
+      const tableCenter = {
+        x: ZONES.meeting.x + ZONES.meeting.width / 2,
+        y: ZONES.meeting.y + ZONES.meeting.height / 2,
+      };
+      const seats = allocateMeetingPositions(toMove, tableCenter);
+
+      // Mark as manual meeting first
+      set((state) => {
+        for (const agentId of toMove) {
+          const a = state.agents.get(agentId);
+          if (a) a.manualMeeting = true;
+        }
+      });
+
+      // Move each agent to their allocated seat
+      for (let i = 0; i < toMove.length; i++) {
+        useOfficeStore.getState().moveToMeeting(toMove[i], seats[i]);
+      }
+    },
+
+    dismissMeeting: (agentIds?: string[]) => {
+      const currentState = useOfficeStore.getState();
+
+      let toDismiss: string[];
+      if (!agentIds || agentIds.length === 0) {
+        // Dismiss all agents currently in or walking to meeting zone
+        toDismiss = Array.from(currentState.agents.entries())
+          .filter(
+            ([, a]) => a.zone === "meeting" || a.movement?.toZone === "meeting",
+          )
+          .map(([id]) => id);
+      } else {
+        const allIds = Array.from(currentState.agents.entries())
+          .filter(([, a]) => !a.isPlaceholder && a.confirmed)
+          .map(([id]) => id);
+        const matched = fuzzyMatchAgentIds(agentIds, allIds, "dismissMeeting");
+        toDismiss = matched.filter((id) => {
+          const a = currentState.agents.get(id);
+          return a && (a.zone === "meeting" || a.movement?.toZone === "meeting");
+        });
+      }
+
+      for (const agentId of toDismiss) {
+        useOfficeStore.getState().returnFromMeeting(agentId);
+      }
+    },
   })),
 );
 
@@ -1267,10 +1346,12 @@ function updateCollaborationLinks(
 ): void {
   const agents = state.sessionKeyMap.get(sessionKey);
   if (!agents || agents.length < 2) {
-    // Try namespace-based matching for mock/non-standard sessionKey scenarios
+    // Try namespace-based matching for parent↔sub-agent and same-namespace scenarios
     const ns = extractSessionNamespace(sessionKey);
     if (ns) {
       const nsAgents = new Set<string>();
+      // Include the current agent being processed (e.g. a sub-agent)
+      nsAgents.add(agentId);
       for (const [sk, ids] of state.sessionKeyMap) {
         if (extractSessionNamespace(sk) === ns && !sk.includes(":subagent:")) {
           for (const id of ids) nsAgents.add(id);
@@ -1387,6 +1468,17 @@ function createPeerCollaborationLink(
 
   // Decay stale links
   state.links = state.links.filter((l) => now - l.lastActivityAt < LINK_TIMEOUT_MS);
+}
+
+function createPeerCollaborationLinksForAgents(
+  state: { links: CollaborationLink[]; agents: Map<string, VisualAgent> },
+  agentIds: string[],
+): void {
+  for (let i = 0; i < agentIds.length; i += 1) {
+    for (let j = i + 1; j < agentIds.length; j += 1) {
+      createPeerCollaborationLink(state, agentIds[i]!, agentIds[j]!);
+    }
+  }
 }
 
 function scheduleMeetingGathering(): void {

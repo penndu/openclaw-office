@@ -76,13 +76,26 @@ export function App() {
     | { gatewayUrl?: string; gatewayToken?: string; gatewayWsPath?: string }
     | undefined;
   const configuredGatewayUrl = injected?.gatewayUrl || import.meta.env.VITE_GATEWAY_URL || "ws://localhost:18789";
+  const configuredGatewayWsPath =
+    injected?.gatewayWsPath || import.meta.env.VITE_GATEWAY_WS_PATH || configuredGatewayUrl;
   const gatewayUrl = resolveGatewayWsUrl(
-    injected?.gatewayWsPath || import.meta.env.VITE_GATEWAY_WS_PATH || "/gateway-ws",
+    configuredGatewayWsPath,
     configuredGatewayUrl,
   );
   const gatewayToken = injected?.gatewayToken || import.meta.env.VITE_GATEWAY_TOKEN || "";
   const { isMobile } = useResponsive();
   const { wsClient } = useGatewayConnection({ url: gatewayUrl, token: gatewayToken });
+
+  // DEV-only: 暴露手动会议 API 到浏览器控制台以便调试
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const win = window as unknown as Record<string, unknown>;
+      win.__requestMeeting = (agentIds: string[]) =>
+        useOfficeStore.getState().requestMeeting(agentIds);
+      win.__dismissMeeting = (agentIds?: string[]) =>
+        useOfficeStore.getState().dismissMeeting(agentIds);
+    }
+  }, []);
 
   return (
     <>

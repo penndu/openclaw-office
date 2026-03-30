@@ -306,6 +306,10 @@ export interface OfficeStore {
   moveToMeeting: (agentId: string, meetingPosition: { x: number; y: number }) => void;
   returnFromMeeting: (agentId: string) => void;
 
+  // 手动会议 API
+  requestMeeting: (agentIds: string[]) => void;
+  dismissMeeting: (agentIds?: string[]) => void;
+
   // 行走动画
   startMovement: (agentId: string, toZone: AgentZone, targetPos?: { x: number; y: number }) => void;
   tickMovement: (agentId: string, deltaTime: number) => void;

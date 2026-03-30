@@ -107,4 +107,44 @@ describe("toSubAgentInfoList", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("uses Gateway label as display name when provided", () => {
+    const result = toSubAgentInfoList([
+      {
+        key: "agent:main:subagent:abc123",
+        agentId: "main",
+        requesterSessionKey: "agent:main:main",
+        label: "Deep Researcher",
+      },
+    ]);
+
+    expect(result[0].label).toBe("Deep Researcher");
+  });
+
+  it("falls back to Sub-<hash> when label is absent", () => {
+    const result = toSubAgentInfoList([
+      {
+        key: "agent:main:subagent:abc123def456",
+        agentId: "main",
+        requesterSessionKey: "agent:main:main",
+      },
+    ]);
+
+    expect(result[0].label).toMatch(/^Sub-/);
+  });
+
+  it("uses agentId as label fallback when no label and no UUID extracted", () => {
+    const result = toSubAgentInfoList([
+      {
+        key: "agent:main:worker",
+        agentId: "worker-agent",
+        requesterSessionKey: "agent:main:main",
+      },
+    ]);
+
+    // key does not contain :subagent:, so UUID extraction returns null
+    // agentId is used as fallback
+    expect(result.length).toBe(1);
+    expect(result[0].label).toBeTruthy();
+  });
 });
