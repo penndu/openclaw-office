@@ -31,6 +31,8 @@ debug-gw.cjs
 # Agent
 .agent/
 .agents/
+.runtime/
+.worktrees/
 .claude/settings.local.json
 .codex/skills/openclaw-office-release/
 
