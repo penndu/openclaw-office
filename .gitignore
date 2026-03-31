@@ -8,6 +8,10 @@ dist/
 .vscode/
 *.swp
 *.swo
+.venv/
+.pnpm-store/
+.cursor/
+.codex/
 
 # OS
 .DS_Store
@@ -19,6 +23,7 @@ output/
 
 # Test
 coverage/
+debug-gw.cjs
 
 # Logs
 *.log
@@ -33,3 +38,4 @@ coverage/
 docs/
 openspec/
 output/playwright/chat-inline-tool-check-1.png
+*.tgz

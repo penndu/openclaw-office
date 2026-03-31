@@ -186,7 +186,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   return (
     <div className={`group mb-6 flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`flex max-w-[90%] items-start gap-3 ${isUser ? "flex-row-reverse text-right" : ""}`}>
+      <div className={`flex max-w-[90%] items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
         {isUser ? (
           <Avatar agentId="user" agentName={authorName} size={32} />
         ) : (
@@ -194,7 +194,7 @@ export const MessageBubble = memo(function MessageBubble({
         )}
 
         <div className="min-w-0">
-          <div className={`mb-1 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 ${isUser ? "justify-end" : ""}`}>
+          <div className={`mb-1 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 ${isUser ? "flex-row-reverse" : ""}`}>
             <span className="font-medium text-gray-500 dark:text-gray-400">{authorName}</span>
             <PinButton isPinned={isPinned} messageId={message.id} onTogglePin={onTogglePin} t={t} />
           </div>
