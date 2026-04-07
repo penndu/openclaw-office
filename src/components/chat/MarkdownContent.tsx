@@ -81,7 +81,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content }: Markdo
               );
             }
             return (
-              <code className={`${className ?? ""} bg-transparent text-inherit`} {...props}>
+              <code className={`${className ?? ""} bg-transparent !text-gray-100`} {...props}>
                 {children}
               </code>
             );

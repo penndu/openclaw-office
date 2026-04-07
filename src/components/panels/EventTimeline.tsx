@@ -123,7 +123,7 @@ export function EventTimeline() {
                   <div className="pt-1">
                     <div className="text-gray-400 dark:text-gray-500">详情</div>
                     <div className="mt-0.5 whitespace-pre-wrap break-all rounded bg-white/60 p-1.5 text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">
-                      {evt.summary || "—"}
+                      {(evt.fullText ?? evt.summary) || "—"}
                     </div>
                   </div>
                 </div>

@@ -18,7 +18,6 @@ OpenClaw Office is the visual monitoring and management frontend for the [OpenCl
 | State Management | Zustand 5 + Immer                           |
 | Styling          | Tailwind CSS 4                              |
 | 2D Rendering     | SVG + CSS Animations                        |
-| 3D Rendering     | React Three Fiber (R3F) + @react-three/drei |
 | Routing          | React Router 7                              |
 | Charts           | Recharts                                    |
 | i18n             | i18next + react-i18next                     |
@@ -32,7 +31,6 @@ OpenClaw Office is the visual monitoring and management frontend for the [OpenCl
 Isometric-style 2D/3D virtual office for real-time Agent status visualization:
 
 - **2D Floor Plan** — SVG office scene with desks, furniture (desk/chair/sofa/plant/coffee cup), Agent avatars, and status animations
-- **3D Scene** — R3F-rendered 3D office with character models, skill holograms, spawn portal effects
 - **Agent Avatars** — Deterministically generated SVG avatars from agentId with status indicators (idle/working/speaking/error)
 - **Collaboration Lines** — Visual connections for inter-Agent messaging
 - **Bubble Panels** — Markdown text stream and tool call display

@@ -1020,22 +1020,66 @@ export const useOfficeStore = create<OfficeStore>()(
         }
 
         // Event history
-        const historyItem: EventHistoryItem = {
-          timestamp: event.ts,
-          agentId,
-          agentName: agent?.name ?? agentId,
-          stream: event.stream,
-          summary: parsed.summary,
-        };
-        state.eventHistory.push(historyItem);
-        if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
-          state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
-        }
+        // assistant 流式输出：同一 runId 的后续 delta 合并到已有条目，避免泛滥
+        if (event.stream === "assistant") {
+          const fullText = (event.data.text as string) ?? parsed.summary;
+          const summary = fullText.length > 60 ? `${fullText.slice(0, 60)}...` : fullText;
 
-        // Non-blocking persistence to IndexedDB
-        queueMicrotask(() => {
-          localPersistence.saveEvent(historyItem).catch(() => {});
-        });
+          // 从末尾向前查找同 runId 的 assistant 条目（遇到该 runId 的 lifecycle 则停止）
+          let mergeIdx = -1;
+          for (let i = state.eventHistory.length - 1; i >= 0; i--) {
+            const h = state.eventHistory[i];
+            if (h.runId === event.runId) {
+              if (h.stream === "assistant") {
+                mergeIdx = i;
+              }
+              // 遇到同 runId 的任何条目就停止（lifecycle:end 意味着本 run 已结束）
+              break;
+            }
+          }
+
+          if (mergeIdx >= 0) {
+            // 更新已有条目，不新增、不重复存储
+            state.eventHistory[mergeIdx].summary = summary;
+            state.eventHistory[mergeIdx].fullText = fullText;
+            state.eventHistory[mergeIdx].timestamp = event.ts;
+          } else {
+            // 首次出现该 runId 的 assistant 事件 — 新建条目
+            const historyItem: EventHistoryItem = {
+              runId: event.runId,
+              timestamp: event.ts,
+              agentId,
+              agentName: agent?.name ?? agentId,
+              stream: event.stream,
+              summary,
+              fullText,
+            };
+            state.eventHistory.push(historyItem);
+            if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
+              state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+            }
+            queueMicrotask(() => {
+              localPersistence.saveEvent(historyItem).catch(() => {});
+            });
+          }
+        } else {
+          const historyItem: EventHistoryItem = {
+            runId: event.runId,
+            timestamp: event.ts,
+            agentId,
+            agentName: agent?.name ?? agentId,
+            stream: event.stream,
+            summary: parsed.summary,
+          };
+          state.eventHistory.push(historyItem);
+          if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
+            state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+          }
+          // Non-blocking persistence to IndexedDB
+          queueMicrotask(() => {
+            localPersistence.saveEvent(historyItem).catch(() => {});
+          });
+        }
 
         state.globalMetrics = computeMetrics(state.agents, state.globalMetrics);
       });

@@ -201,6 +201,10 @@ export interface EventHistoryItem {
   agentName: string;
   stream: AgentStream;
   summary: string;
+  /** 所属 run 的 ID，用于合并同一 run 的流式 assistant 事件 */
+  runId?: string;
+  /** assistant 流式输出的完整累积文本，供展开详情时显示 */
+  fullText?: string;
 }
 
 // --- Sub-Agent 轮询 ---
