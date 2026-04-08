@@ -62,7 +62,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content }: Markdo
           ),
           pre: ({ children, ...props }) => (
             <pre
-              className="overflow-x-auto rounded-2xl border border-gray-200 bg-gray-950 p-4 text-xs text-gray-100 dark:border-gray-700"
+              className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
               {...props}
             >
               {children}
@@ -81,7 +81,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content }: Markdo
               );
             }
             return (
-              <code className={`${className ?? ""} bg-transparent !text-gray-100`} {...props}>
+              <code className={`${className ?? ""} bg-transparent !text-gray-800 dark:!text-gray-100`} {...props}>
                 {children}
               </code>
             );

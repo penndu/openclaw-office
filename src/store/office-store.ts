@@ -1062,23 +1062,85 @@ export const useOfficeStore = create<OfficeStore>()(
               localPersistence.saveEvent(historyItem).catch(() => {});
             });
           }
-        } else {
-          const historyItem: EventHistoryItem = {
-            runId: event.runId,
-            timestamp: event.ts,
-            agentId,
-            agentName: agent?.name ?? agentId,
-            stream: event.stream,
-            summary: parsed.summary,
-          };
-          state.eventHistory.push(historyItem);
-          if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
-            state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+        } else if (event.stream === "item") {
+          // item 流：按 itemId 合并，避免同一工具任务产生大量重复条目
+          const itemId = event.data.itemId as string | undefined;
+          const summary = parsed.summary;
+
+          // 跳过空摘要事件（无意义的中间状态）
+          if (!summary) {
+            // do nothing
+          } else if (itemId) {
+            // 查找同 runId + 同 itemId 的已有 item 条目
+            let mergeIdx = -1;
+            for (let i = state.eventHistory.length - 1; i >= 0; i--) {
+              const h = state.eventHistory[i];
+              if (h.runId === event.runId && h.stream === "item" && h.itemId === itemId) {
+                mergeIdx = i;
+                break;
+              }
+            }
+
+            if (mergeIdx >= 0) {
+              state.eventHistory[mergeIdx].summary = summary;
+              state.eventHistory[mergeIdx].timestamp = event.ts;
+            } else {
+              const historyItem: EventHistoryItem = {
+                runId: event.runId,
+                timestamp: event.ts,
+                agentId,
+                agentName: agent?.name ?? agentId,
+                stream: event.stream,
+                summary,
+                itemId,
+              };
+              state.eventHistory.push(historyItem);
+              if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
+                state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+              }
+              queueMicrotask(() => {
+                localPersistence.saveEvent(historyItem).catch(() => {});
+              });
+            }
+          } else {
+            const historyItem: EventHistoryItem = {
+              runId: event.runId,
+              timestamp: event.ts,
+              agentId,
+              agentName: agent?.name ?? agentId,
+              stream: event.stream,
+              summary,
+            };
+            state.eventHistory.push(historyItem);
+            if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
+              state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+            }
+            queueMicrotask(() => {
+              localPersistence.saveEvent(historyItem).catch(() => {});
+            });
           }
-          // Non-blocking persistence to IndexedDB
-          queueMicrotask(() => {
-            localPersistence.saveEvent(historyItem).catch(() => {});
-          });
+        } else {
+          // 跳过空摘要事件（unknown stream 等无意义状态不写入历史）
+          if (!parsed.summary) {
+            // do nothing
+          } else {
+            const historyItem: EventHistoryItem = {
+              runId: event.runId,
+              timestamp: event.ts,
+              agentId,
+              agentName: agent?.name ?? agentId,
+              stream: event.stream,
+              summary: parsed.summary,
+            };
+            state.eventHistory.push(historyItem);
+            if (state.eventHistory.length > EVENT_HISTORY_LIMIT) {
+              state.eventHistory = state.eventHistory.slice(-EVENT_HISTORY_LIMIT);
+            }
+            // Non-blocking persistence to IndexedDB
+            queueMicrotask(() => {
+              localPersistence.saveEvent(historyItem).catch(() => {});
+            });
+          }
         }
 
         state.globalMetrics = computeMetrics(state.agents, state.globalMetrics);

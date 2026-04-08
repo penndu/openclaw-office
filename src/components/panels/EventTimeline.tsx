@@ -1,21 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AgentStream } from "@/gateway/types";
 import { STATUS_COLORS } from "@/lib/constants";
 import { useOfficeStore } from "@/store/office-store";
 
-const STREAM_ICONS: Record<AgentStream, string> = {
+const STREAM_ICONS: Record<string, string> = {
   lifecycle: "●",
   tool: "🔧",
   assistant: "💬",
   error: "⚠",
+  item: "📋",
+  plan: "📝",
+  approval: "🔐",
+  command_output: "⌨",
+  patch: "📄",
+  thinking: "💭",
+  compaction: "🗜",
 };
 
-const STREAM_LABELS: Record<AgentStream, string> = {
+const STREAM_LABELS: Record<string, string> = {
   lifecycle: "生命周期",
   tool: "工具调用",
   assistant: "对话输出",
   error: "异常",
+  item: "任务项",
+  plan: "计划",
+  approval: "审批",
+  command_output: "命令输出",
+  patch: "文件变更",
+  thinking: "思考",
+  compaction: "上下文压缩",
 };
 
 const MAX_DISPLAY = 50;

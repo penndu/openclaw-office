@@ -276,26 +276,81 @@ function extractAttachments(message: Record<string, unknown>): ChatAttachment[] 
 }
 
 function normalizeHistoryMessage(message: Record<string, unknown>): ChatDockMessage {
+  const toolCalls = Array.isArray(message.toolCalls) ? (message.toolCalls as ToolCallInfo[]) : undefined;
+  // Preserve the kind field; infer "tool" when not stored but toolCalls exist on a system message
+  const storedKind = typeof message.kind === "string" ? (message.kind as ChatMessageKind) : undefined;
+  const inferredKind: ChatMessageKind | undefined =
+    storedKind ?? (toolCalls && toolCalls.length > 0 && message.role === "system" ? "tool" : undefined);
+
   return {
     id: String(message.id ?? generateMessageId()),
     role: normalizeRole(message.role),
     content: extractText(message.content ?? message.text ?? ""),
     timestamp: typeof message.timestamp === "number" ? message.timestamp : Date.now(),
     attachments: extractAttachments(message),
-    toolCalls: Array.isArray(message.toolCalls) ? (message.toolCalls as ToolCallInfo[]) : undefined,
+    toolCalls,
+    kind: inferredKind,
+    // Completed tool messages in history should be collapsed by default
+    collapsed: typeof message.collapsed === "boolean" ? message.collapsed : inferredKind === "tool" ? true : undefined,
+    authorAgentId: typeof message.authorAgentId === "string" ? message.authorAgentId : null,
     runId: typeof message.runId === "string" ? message.runId : null,
     aborted: Boolean(message.aborted),
   };
+}
+
+/**
+ * Expand assistant messages that have embedded toolCalls (Gateway native format) into separate
+ * "tool" kind messages followed by the assistant message. This makes Gateway-fetched history
+ * display identically to live session tool activity bubbles.
+ *
+ * For cached messages (live-session format), assistant messages do NOT have embedded toolCalls
+ * (they come via separate agent events), so this is a no-op for those messages.
+ */
+function reconstructToolMessages(
+  messages: ChatDockMessage[],
+  authorAgentId: string | null,
+): ChatDockMessage[] {
+  const result: ChatDockMessage[] = [];
+  for (const message of messages) {
+    if (message.role === "assistant" && Array.isArray(message.toolCalls) && message.toolCalls.length > 0) {
+      // Insert individual tool kind messages before the assistant message
+      for (const toolCall of message.toolCalls) {
+        result.push({
+          id: `${message.id}:tool:${toolCall.id}`,
+          role: "system",
+          content: i18n.t("chat:toolActivity.finished", { name: toolCall.name }),
+          timestamp: message.timestamp,
+          kind: "tool",
+          collapsed: true,
+          toolCalls: [toolCall],
+          runId: message.runId ?? null,
+          authorAgentId: message.authorAgentId ?? authorAgentId,
+        });
+      }
+      // Push the assistant message without embedded toolCalls to avoid double-reconstruction on cache reload
+      result.push({ ...message, toolCalls: undefined });
+    } else {
+      result.push(message);
+    }
+  }
+  return result;
 }
 
 function normalizeHistoryMessages(
   messages: Record<string, unknown>[],
   authorAgentId: string | null,
 ): ChatDockMessage[] {
-  return messages.map((message) => {
-    const normalized = normalizeHistoryMessage(message);
-    return normalized.role === "assistant" ? { ...normalized, authorAgentId } : normalized;
+  const normalized = messages.map((message) => {
+    const msg = normalizeHistoryMessage(message);
+    // Apply session authorAgentId as fallback for assistant and tool messages
+    if ((msg.role === "assistant" || msg.kind === "tool") && !msg.authorAgentId) {
+      return { ...msg, authorAgentId };
+    }
+    return msg;
   });
+  // Reconstruct separate tool kind messages from any assistant messages that have embedded toolCalls
+  // (Gateway native format). For cached live-session messages this is a no-op.
+  return reconstructToolMessages(normalized, authorAgentId);
 }
 
 function findLatestToolMessageIndex(messages: ChatDockMessage[], runId: string, toolName: string): number {
@@ -852,7 +907,13 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
 
       if (gatewayMessages.length > 0) {
         const currentMessages = get().messages;
-        const shouldUpdate = !cacheHit || gatewayMessages.length !== currentMessages.length;
+        // Only overwrite the rich cached messages when Gateway actually has *more* messages
+        // (new messages arrived since last cache write). When Gateway has the same count or
+        // fewer messages it means the cache is richer (e.g. it contains kind:"tool" messages
+        // that the Gateway history flattens into plain assistant messages). Overwriting in
+        // that case permanently destroys the tool activity display metadata.
+        const cacheHasRichMessages = cacheHit && currentMessages.some((m) => m.kind === "tool");
+        const shouldUpdate = !cacheHit || (!cacheHasRichMessages && gatewayMessages.length !== currentMessages.length);
         if (shouldUpdate) {
           const nextSessions = touchSession(get().sessions, currentSessionKey, get().targetAgentId, gatewayMessages.length);
           set({
@@ -863,9 +924,10 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
             thinkingLevel: result.thinkingLevel ?? null,
           });
           persistSessions(nextSessions);
+          // Only persist the gateway messages when we actually used them
+          void localPersistence.saveMessages(currentSessionKey, gatewayMessages);
+          serverPersistence.saveMessagesImmediate(currentSessionKey, gatewayMessages, authorAgentId);
         }
-        void localPersistence.saveMessages(currentSessionKey, gatewayMessages);
-        serverPersistence.saveMessagesImmediate(currentSessionKey, gatewayMessages, authorAgentId);
       } else if (!cacheHit) {
         const activeSession = get().sessions.find((session) => session.key === currentSessionKey);
         set({

@@ -82,6 +82,17 @@
     "toolDone": "工具完成: {{name}}",
     "errorPrefix": "错误: {{message}}",
     "unknownStream": "未知流: {{stream}}",
-    "lifecycleUnknown": "生命周期: {{phase}}"
+    "lifecycleUnknown": "生命周期: {{phase}}",
+    "commandOutput": "命令输出",
+    "commandExited": "命令退出 (code: {{code}})",
+    "itemStart": "开始: {{title}}",
+    "itemDone": "完成: {{title}}",
+    "itemFailed": "失败: {{title}}",
+    "itemUpdate": "任务更新",
+    "plan": "计划: {{title}}",
+    "approvalRequested": "等待审批: {{title}}",
+    "approvalResolved": "审批完成: {{title}}",
+    "patch": "文件变更 ({{total}} 项)",
+    "compaction": "上下文压缩"
   }
 }

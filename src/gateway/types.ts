@@ -107,7 +107,19 @@ export interface HelloOk {
 
 // --- Agent 事件 ---
 
-export type AgentStream = "lifecycle" | "tool" | "assistant" | "error";
+export type AgentStream =
+  | "lifecycle"
+  | "tool"
+  | "assistant"
+  | "error"
+  | "item"
+  | "plan"
+  | "approval"
+  | "command_output"
+  | "patch"
+  | "thinking"
+  | "compaction"
+  | (string & {});
 
 export interface AgentEventPayload {
   runId: string;
@@ -205,6 +217,8 @@ export interface EventHistoryItem {
   runId?: string;
   /** assistant 流式输出的完整累积文本，供展开详情时显示 */
   fullText?: string;
+  /** item 流的 itemId，用于按追踪项合并 item 事件 */
+  itemId?: string;
 }
 
 // --- Sub-Agent 轮询 ---
