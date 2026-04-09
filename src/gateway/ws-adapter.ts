@@ -20,6 +20,8 @@ import type {
   ConfigWriteResult,
   CronTask,
   CronTaskInput,
+  LogsTailParams,
+  LogsTailResult,
   ModelCatalogEntry,
   SessionPatchParams,
   SessionInfo,
@@ -340,6 +342,13 @@ export class WsAdapter implements GatewayAdapter {
   async updateRun(params?: { restartDelayMs?: number }): Promise<UpdateRunResult> {
     const result = await this.rpcClient.request<UpdateRunResult>("update.run", params ?? {});
     return normalizeUpdateRunResult(result);
+  }
+
+  async logsTail(params?: LogsTailParams): Promise<LogsTailResult> {
+    return this.rpcClient.request<LogsTailResult>(
+      "logs.tail",
+      (params ?? {}) as unknown as Record<string, unknown>,
+    );
   }
 }
 

@@ -5,7 +5,9 @@ import { AdvancedSection } from "@/components/console/settings/AdvancedSection";
 import { AppearanceSection } from "@/components/console/settings/AppearanceSection";
 import { DeveloperSection } from "@/components/console/settings/DeveloperSection";
 import { GatewaySection } from "@/components/console/settings/GatewaySection";
+import { LogViewerSection } from "@/components/console/settings/LogViewerSection";
 import { ProvidersSection } from "@/components/console/settings/ProvidersSection";
+import { ServiceSection } from "@/components/console/settings/ServiceSection";
 import { UpdateSection } from "@/components/console/settings/UpdateSection";
 import { LoadingState } from "@/components/console/shared/LoadingState";
 import { useConfigStore } from "@/store/console-stores/config-store";
@@ -39,6 +41,8 @@ export function SettingsPage() {
           <AppearanceSection />
           <ProvidersSection />
           <GatewaySection />
+          <ServiceSection />
+          <LogViewerSection />
           <UpdateSection />
           <AdvancedSection />
           {devMode && <DeveloperSection />}

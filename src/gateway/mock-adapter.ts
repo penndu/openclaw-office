@@ -18,6 +18,8 @@ import type {
   ConfigWriteResult,
   CronTask,
   CronTaskInput,
+  LogsTailParams,
+  LogsTailResult,
   ModelCatalogEntry,
   SessionPatchParams,
   SessionInfo,
@@ -1147,6 +1149,48 @@ export class MockAdapter implements GatewayAdapter {
         durationMs: 1200,
       },
       restart: null,
+    };
+  }
+
+  private mockLogCursor = 0;
+
+  async logsTail(params?: LogsTailParams): Promise<LogsTailResult> {
+    const cursor = params?.cursor ?? this.mockLogCursor;
+    const limit = params?.limit ?? 50;
+    const levels = ["INFO", "DEBUG", "WARN", "ERROR"] as const;
+    const sources = ["gateway", "agent:main", "ws-server", "cron", "skill:web-search"] as const;
+    const messages = [
+      "Heartbeat sent",
+      "Agent run completed (runId=mock-123)",
+      "WebSocket client connected from 127.0.0.1",
+      "Config hot-reload triggered",
+      "Cron job 'daily-summary' executed successfully",
+      "Skill web-search invoked with query='test'",
+      "Session compacted: removed 12 messages",
+      "Rate limit: 45/100 requests used",
+      "Memory usage: 128MB / 512MB",
+      "Agent spawned sub-agent mock-sub-7",
+    ];
+
+    const lineCount = Math.min(limit, Math.floor(Math.random() * 5) + 1);
+    const lines: string[] = [];
+    const now = Date.now();
+
+    for (let i = 0; i < lineCount; i++) {
+      const level = levels[Math.floor(Math.random() * levels.length)];
+      const source = sources[Math.floor(Math.random() * sources.length)];
+      const msg = messages[Math.floor(Math.random() * messages.length)];
+      const ts = new Date(now - (lineCount - i) * 1000).toISOString();
+      lines.push(`${ts} [${level}] [${source}] ${msg}`);
+    }
+
+    this.mockLogCursor = cursor + lineCount;
+
+    return {
+      file: "~/.openclaw/logs/gateway.log",
+      cursor: this.mockLogCursor,
+      size: this.mockLogCursor * 120,
+      lines,
     };
   }
 }

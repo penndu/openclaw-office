@@ -418,6 +418,23 @@ export interface ModelCatalogEntry {
   input?: Array<"text" | "image">;
 }
 
+// --- Logs types ---
+
+export interface LogsTailParams {
+  cursor?: number;
+  limit?: number;
+  maxBytes?: number;
+}
+
+export interface LogsTailResult {
+  file: string;
+  cursor: number;
+  size: number;
+  lines: string[];
+  truncated?: boolean;
+  reset?: boolean;
+}
+
 export interface UpdateRunResult {
   ok: boolean;
   result: {

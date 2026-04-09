@@ -20,6 +20,8 @@ import type {
   ConfigWriteResult,
   CronTask,
   CronTaskInput,
+  LogsTailParams,
+  LogsTailResult,
   ModelCatalogEntry,
   SessionPatchParams,
   SessionInfo,
@@ -104,4 +106,7 @@ export interface GatewayAdapter {
   configSchema(): Promise<ConfigSchemaResponse>;
   statusSummary(): Promise<StatusSummary>;
   updateRun(params?: { restartDelayMs?: number }): Promise<UpdateRunResult>;
+
+  // Logs
+  logsTail(params?: LogsTailParams): Promise<LogsTailResult>;
 }

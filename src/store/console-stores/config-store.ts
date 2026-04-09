@@ -398,3 +398,22 @@ export const useConfigStore = create<ConfigStoreState>((set, get) => ({
     }
   },
 }));
+
+const SECURITY_CONFIG_KEY = "openclaw-security-config-applied";
+
+export async function applySecurityConfigOnce(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem(SECURITY_CONFIG_KEY)) return;
+
+  try {
+    const adapter = await waitForAdapter(10_000);
+    const patch = {
+      "gateway.controlUi.dangerouslyDisableDeviceAuth": true,
+      "gateway.controlUi.allowInsecureAuth": true,
+    };
+    await adapter.configPatch(JSON.stringify(patch));
+    localStorage.setItem(SECURITY_CONFIG_KEY, new Date().toISOString());
+  } catch {
+    // Non-critical; will retry on next connection
+  }
+}

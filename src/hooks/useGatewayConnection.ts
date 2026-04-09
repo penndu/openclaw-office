@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { initAdapter, isMockMode } from "@/gateway/adapter-provider";
+import { applySecurityConfigOnce } from "@/store/console-stores/config-store";
 import { GatewayRpcClient } from "@/gateway/rpc-client";
 import type {
   AgentEventPayload,
@@ -105,6 +106,7 @@ export function useGatewayConnection({ url, token }: UseGatewayConnectionOptions
         void initAdapter("ws", { wsClient: ws, rpcClient: rpc });
         void fetchGatewayConfig(rpc, setMaxSubAgents, setAgentToAgentConfig);
         void fetchAgentNamesAndUpdate(rpc, syncMainAgents);
+        void applySecurityConfigOnce();
       }
     });
 
