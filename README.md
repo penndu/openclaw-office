@@ -125,6 +125,38 @@ OPENCLAW_GATEWAY_TOKEN=<token> openclaw-office
 
 ---
 
+## 安装为系统服务（后台运行）
+
+将 OpenClaw Office 注册为系统服务后，它会在开机 / 登录时自动启动，无需手动运行命令。支持 macOS（launchd）和 Linux（systemd --user）。
+
+### 安装服务
+
+```bash
+# 安装为系统服务（token 自动检测，也可手动指定）
+openclaw-office service install
+
+# 指定 token 和端口
+openclaw-office service install --token <your-token> --port 3000
+```
+
+安装完成后，服务会**立即启动**并在后台运行。后续每次开机/登录，服务将自动拉起。
+
+### 服务管理命令
+
+```bash
+openclaw-office service status              # 查看服务状态
+openclaw-office service stop                # 停止服务
+openclaw-office service start               # 启动服务
+openclaw-office service restart             # 重启服务
+openclaw-office service log                 # 查看服务日志
+openclaw-office service log --follow        # 实时跟踪日志
+openclaw-office service uninstall           # 卸载系统服务
+```
+
+> **提示：** 安装为服务后，也可通过 Settings 页面的「服务管理」面板查看 Gateway 状态和执行重启等操作。
+
+---
+
 ## 快速开始（从源码）
 
 ### 1. 安装依赖

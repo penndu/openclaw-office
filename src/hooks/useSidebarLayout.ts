@@ -11,7 +11,7 @@ export interface SectionState {
 export type SidebarLayoutState = Record<string, SectionState>;
 
 const DEFAULT_STATE: SidebarLayoutState = {
-  metrics: { collapsed: true, height: null },
+  metrics: { collapsed: false, height: null },
   agents: { collapsed: false, height: null },
   subAgents: { collapsed: false, height: null },
   detail: { collapsed: false, height: null },

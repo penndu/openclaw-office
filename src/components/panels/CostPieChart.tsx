@@ -44,7 +44,7 @@ export function CostPieChart() {
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative aspect-square w-full max-w-[160px]">
+      <div className="relative aspect-square w-full max-w-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

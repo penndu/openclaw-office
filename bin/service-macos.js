@@ -216,10 +216,10 @@ export function stop() {
   ok("Service stopped");
 }
 
-export function restart() {
+export async function restart() {
   stop();
-  // Small delay
-  setTimeout(() => start(), 500);
+  await new Promise((r) => setTimeout(r, 500));
+  start();
 }
 
 export function status() {

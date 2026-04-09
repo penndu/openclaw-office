@@ -125,6 +125,38 @@ OPENCLAW_GATEWAY_TOKEN=<token> openclaw-office
 
 ---
 
+## Install as a System Service (Background Mode)
+
+Register OpenClaw Office as a system service so it starts automatically on boot/login — no manual command needed. Supported on macOS (launchd) and Linux (systemd --user).
+
+### Install the Service
+
+```bash
+# Install as system service (token auto-detected, or specify manually)
+openclaw-office service install
+
+# Specify token and port
+openclaw-office service install --token <your-token> --port 3000
+```
+
+Once installed, the service **starts immediately** and runs in the background. It will be automatically launched on every subsequent boot/login.
+
+### Service Management Commands
+
+```bash
+openclaw-office service status              # Check service status
+openclaw-office service stop                # Stop the service
+openclaw-office service start               # Start the service
+openclaw-office service restart             # Restart the service
+openclaw-office service log                 # Show service logs
+openclaw-office service log --follow        # Follow log output in real time
+openclaw-office service uninstall           # Remove the system service
+```
+
+> **Tip:** After installing as a service, you can also view Gateway status and perform operations like restart from the Settings page "Service Management" panel.
+
+---
+
 ## Quick Start (from source)
 
 ### 1. Install Dependencies

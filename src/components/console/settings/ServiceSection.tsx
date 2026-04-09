@@ -7,7 +7,6 @@ import {
   Play,
   RefreshCw,
   Square,
-  Trash2,
   XCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -25,7 +24,6 @@ export function ServiceSection() {
   const stopService = useServiceStore((s) => s.stopService);
   const restartService = useServiceStore((s) => s.restartService);
   const installService = useServiceStore((s) => s.installService);
-  const uninstallService = useServiceStore((s) => s.uninstallService);
 
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
@@ -60,7 +58,7 @@ export function ServiceSection() {
   const anyLoading = Object.values(loading).some(Boolean);
 
   function handleAction(action: string, fn: () => Promise<boolean>) {
-    const needsConfirm = ["stop", "restart", "uninstall"].includes(action);
+    const needsConfirm = ["stop", "restart"].includes(action);
     if (needsConfirm && confirmAction !== action) {
       setConfirmAction(action);
       return;
@@ -137,7 +135,6 @@ export function ServiceSection() {
           <p className="text-sm text-amber-800 dark:text-amber-300">
             {confirmAction === "stop" && t("settings.service.confirmStop")}
             {confirmAction === "restart" && t("settings.service.confirmRestart")}
-            {confirmAction === "uninstall" && t("settings.service.confirmUninstall")}
           </p>
           <div className="mt-2 flex gap-2">
             <button
@@ -146,7 +143,6 @@ export function ServiceSection() {
                 const actions: Record<string, () => Promise<boolean>> = {
                   stop: stopService,
                   restart: restartService,
-                  uninstall: uninstallService,
                 };
                 const fn = actions[confirmAction];
                 if (fn) {
@@ -207,44 +203,26 @@ export function ServiceSection() {
         )}
       </div>
 
-      {/* Install/Uninstall section */}
-      <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-        <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-          {isInstalled
-            ? t("settings.service.uninstallHint")
-            : t("settings.service.installHint")}
-        </p>
-        <div className="flex gap-2">
-          {!isInstalled && (
-            <ActionButton
-              icon={<Download className="h-3.5 w-3.5" />}
-              label={
-                loading.install
-                  ? t("settings.service.installing")
-                  : t("settings.service.install")
-              }
-              loading={loading.install}
-              disabled={anyLoading}
-              onClick={() => void installService()}
-              variant="default"
-            />
-          )}
-          {isInstalled && (
-            <ActionButton
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-              label={
-                loading.uninstall
-                  ? t("settings.service.uninstalling")
-                  : t("settings.service.uninstall")
-              }
-              loading={loading.uninstall}
-              disabled={anyLoading}
-              onClick={() => handleAction("uninstall", uninstallService)}
-              variant="red"
-            />
-          )}
+      {/* Install section */}
+      {!isInstalled && (
+        <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+            {t("settings.service.installHint")}
+          </p>
+          <ActionButton
+            icon={<Download className="h-3.5 w-3.5" />}
+            label={
+              loading.install
+                ? t("settings.service.installing")
+                : t("settings.service.install")
+            }
+            loading={loading.install}
+            disabled={anyLoading}
+            onClick={() => void installService()}
+            variant="default"
+          />
         </div>
-      </div>
+      )}
     </div>
   );
 }

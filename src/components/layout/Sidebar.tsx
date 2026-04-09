@@ -101,8 +101,8 @@ export function Sidebar() {
         onToggle={() => toggleSection("metrics")}
         height={metricsSection.height}
         onHeightChange={(h) => setSectionHeight("metrics", h)}
-        minHeight={120}
-        maxHeight={400}
+        minHeight={280}
+        maxHeight={500}
       >
         <MetricsPanel />
       </CollapsibleSection>

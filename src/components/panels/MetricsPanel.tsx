@@ -17,7 +17,7 @@ const ActivityHeatmap = lazy(() =>
 
 function TabSpinner() {
   return (
-    <div className="flex min-h-[140px] items-center justify-center">
+    <div className="flex min-h-[100px] items-center justify-center">
       <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
     </div>
   );

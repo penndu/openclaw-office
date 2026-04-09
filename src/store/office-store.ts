@@ -229,7 +229,7 @@ export const useOfficeStore = create<OfficeStore>()(
     connectionError: null,
     selectedAgentId: null,
     eventHistory: [],
-    sidebarCollapsed: true,
+    sidebarCollapsed: false,
     lastSessionsSnapshot: null,
     theme: getInitialTheme(),
     operatorScopes: [] as string[],
