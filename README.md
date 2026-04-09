@@ -157,6 +157,42 @@ openclaw-office service uninstall           # 卸载系统服务
 
 ---
 
+## Windows（WSL2）一键启动
+
+> **系统要求：** Windows 10 21H2 / Windows 11 + WSL2，以及一个 Linux 发行版（如 Ubuntu）。
+
+对于 Windows 用户，OpenClaw Office 提供了基于 WSL2 的一键部署方案，无需手动在 WSL 中配置依赖：
+
+**双击 `start-openclaw-office.cmd`** — 即可完成以下全部操作：
+
+1. **自动检测** WSL 发行版（自动跳过 docker-desktop）
+2. **自动安装** Node.js 22+ 和 OpenClaw（如果 WSL 中尚未安装）
+3. **初始化配置** OpenClaw Gateway（首次运行自动生成 token）
+4. **启动 Gateway** 服务（在 WSL 中以 systemd 方式运行）
+5. **启动 Office Server**（在 Windows 本机以 Node.js 运行）
+6. **自动打开浏览器** `http://127.0.0.1:5180`
+
+也可通过 PowerShell 直接调用（支持自定义参数）：
+
+```powershell
+# 指定 OpenClaw 版本和端口
+.\scripts\start-openclaw-office.ps1 -OpenClawVersion "2026.3.28" -OfficePort 5180 -GatewayPort 18789
+
+# 指定使用特定 WSL 发行版
+.\scripts\start-openclaw-office.ps1 -Distro "Ubuntu-22.04"
+```
+
+| 参数                  | 说明                              | 默认值        |
+| --------------------- | --------------------------------- | ------------- |
+| `-Distro`             | WSL 发行版名称（空则自动检测）    | `""`（自动）  |
+| `-OpenClawVersion`    | 要安装的 OpenClaw 版本            | `2026.3.28`   |
+| `-OfficePort`         | Office Server 端口                | `5180`        |
+| `-GatewayPort`        | Gateway 端口                      | `18789`       |
+
+> **提示：** 运行时日志和 PID 文件保存在仓库根目录的 `.runtime/` 目录下，已加入 `.gitignore`。
+
+---
+
 ## 快速开始（从源码）
 
 ### 1. 安装依赖

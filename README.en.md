@@ -157,6 +157,42 @@ openclaw-office service uninstall           # Remove the system service
 
 ---
 
+## Windows (WSL2) One-Click Launch
+
+> **Requirements:** Windows 10 21H2 / Windows 11 with WSL2 enabled, and a Linux distribution (e.g., Ubuntu).
+
+For Windows users, OpenClaw Office provides a WSL2-based one-click deployment — no manual WSL dependency setup required:
+
+**Double-click `start-openclaw-office.cmd`** — it handles everything automatically:
+
+1. **Auto-detects** your WSL distribution (skips docker-desktop)
+2. **Auto-installs** Node.js 22+ and OpenClaw in WSL (if not already installed)
+3. **Initializes** OpenClaw Gateway config (auto-generates token on first run)
+4. **Starts the Gateway** service in WSL via systemd
+5. **Starts the Office Server** natively in Windows via Node.js
+6. **Opens the browser** at `http://127.0.0.1:5180`
+
+You can also invoke the PowerShell script directly with custom options:
+
+```powershell
+# Specify OpenClaw version and ports
+.\scripts\start-openclaw-office.ps1 -OpenClawVersion "2026.3.28" -OfficePort 5180 -GatewayPort 18789
+
+# Use a specific WSL distribution
+.\scripts\start-openclaw-office.ps1 -Distro "Ubuntu-22.04"
+```
+
+| Parameter          | Description                                      | Default       |
+| ------------------ | ------------------------------------------------ | ------------- |
+| `-Distro`          | WSL distribution name (empty = auto-detect)      | `""` (auto)   |
+| `-OpenClawVersion` | OpenClaw version to install                      | `2026.3.28`   |
+| `-OfficePort`      | Office Server port                               | `5180`        |
+| `-GatewayPort`     | Gateway port                                     | `18789`       |
+
+> **Note:** Runtime logs and PID files are stored in the `.runtime/` directory at the repository root, which is already listed in `.gitignore`.
+
+---
+
 ## Quick Start (from source)
 
 ### 1. Install Dependencies
