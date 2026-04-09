@@ -309,6 +309,8 @@
       "emptyHint": "Click the button above to add your first provider",
       "apiKeyConfigured": "Configured",
       "apiKeyNotConfigured": "Not configured",
+      "apiKeyRequired": "API key required",
+      "noApiKeyRequired": "No key needed",
       "systemDiscovered": "System",
       "modelCount": "{{count}} model(s)",
       "deleteTitle": "Delete Provider",

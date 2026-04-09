@@ -11,6 +11,14 @@ import { networkInterfaces, homedir } from "node:os";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const distDir = resolve(__dirname, "..", "dist");
 
+// --- Service subcommand routing ---
+// If argv[2] is "service", delegate to the service manager module.
+if (process.argv[2] === "service") {
+  const { runService } = await import("./service.js");
+  await runService();
+  process.exit(0);
+}
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
@@ -79,6 +87,13 @@ function printHelp() {
     openclaw-office --token my-secret-token
     openclaw-office --gateway ws://192.168.1.100:18789
     PORT=3000 openclaw-office
+
+  \x1b[1mService management:\x1b[0m
+    openclaw-office service install --token <token>    # Auto-start on login/boot
+    openclaw-office service status                     # Check service status
+    openclaw-office service stop                       # Stop the service
+    openclaw-office service uninstall                  # Remove the service
+    openclaw-office service help                       # Show service help
 `);
 }
 

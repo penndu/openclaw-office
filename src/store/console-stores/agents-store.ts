@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getAdapter, waitForAdapter } from "@/gateway/adapter-provider";
 import { useConfigStore } from "@/store/console-stores/config-store";
+import { inferProviderType, REDACTED_SENTINEL } from "@/lib/provider-types";
 import type {
   AgentCreateParams,
   AgentFileInfo,
@@ -174,26 +175,56 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
       ]);
       const config = snap.config;
 
+      const models = config?.models as Record<string, unknown> | undefined;
+      const providers = models?.providers as Record<string, Record<string, unknown>> | undefined;
+
+      // Build a set of provider IDs that have usable credentials.
+      // A provider is usable if it doesn't require an API key, or it does but has one configured.
+      const usableProviderIds = new Set<string>();
+      if (providers) {
+        for (const [providerId, provConfig] of Object.entries(providers)) {
+          const meta = inferProviderType(
+            providerId,
+            provConfig.api as string | undefined,
+            provConfig.baseUrl as string | undefined,
+          );
+          if (!meta.requiresApiKey) {
+            usableProviderIds.add(providerId);
+          } else {
+            const hasAuth = typeof provConfig.auth === "string" && provConfig.auth.length > 0;
+            const hasKey =
+              provConfig.apiKey === REDACTED_SENTINEL ||
+              (typeof provConfig.apiKey === "string" && provConfig.apiKey.length > 0);
+            if (hasAuth || hasKey) {
+              usableProviderIds.add(providerId);
+            }
+          }
+        }
+      }
+      // Catalog-only providers that don't require an API key are always usable
+      for (const m of catalogModels) {
+        const meta = inferProviderType(m.provider);
+        if (!meta.requiresApiKey) {
+          usableProviderIds.add(m.provider);
+        }
+      }
+
       const seen = new Set<string>();
       const options: SystemModelOption[] = [];
 
-      const catalogByProvider = new Map<
-        string,
-        Array<{ id: string; name: string; provider: string }>
-      >();
+      // Add catalog models — only for providers that have usable credentials
       for (const m of catalogModels) {
+        if (!usableProviderIds.has(m.provider)) continue;
         const key = `${m.provider}/${m.id}`;
         if (seen.has(key)) continue;
         seen.add(key);
         options.push({ id: key, label: m.name ?? m.id, provider: m.provider });
-        if (!catalogByProvider.has(m.provider)) catalogByProvider.set(m.provider, []);
-        catalogByProvider.get(m.provider)!.push(m);
       }
 
-      const models = config?.models as Record<string, unknown> | undefined;
-      const providers = models?.providers as Record<string, Record<string, unknown>> | undefined;
+      // Add config-defined models — only for providers that have usable credentials
       if (providers) {
         for (const [providerId, provConfig] of Object.entries(providers)) {
+          if (!usableProviderIds.has(providerId)) continue;
           const modelList = provConfig.models as Array<{ id: string; name?: string }> | undefined;
           if (!modelList) continue;
           for (const m of modelList) {

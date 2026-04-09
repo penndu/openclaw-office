@@ -76,7 +76,9 @@ export function CatalogProviderCard({ providerId, models }: CatalogProviderCardP
           )}
 
           <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-            {meta.requiresApiKey ? "OAuth" : t("settings.providers.apiKeyConfigured")}
+            {meta.requiresApiKey
+              ? t("settings.providers.apiKeyRequired")
+              : t("settings.providers.noApiKeyRequired")}
           </span>
         </div>
       </div>
