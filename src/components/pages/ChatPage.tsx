@@ -18,22 +18,10 @@ import { useTranslation } from "react-i18next";
 import TextareaAutosize from "react-textarea-autosize";
 import { AgentSelector } from "@/components/chat/AgentSelector";
 import { MessageBubble } from "@/components/chat/MessageBubble";
+import { useChatStreamingText } from "@/hooks/useChatStreamingText";
 import { getSlashCommands } from "@/lib/chat-slash-commands";
 import { useChatDockStore } from "@/store/console-stores/chat-dock-store";
 import { useOfficeStore } from "@/store/office-store";
-
-function extractStreamingText(streamingMessage: Record<string, unknown> | null): string {
-  if (!streamingMessage) return "";
-  const content = streamingMessage.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return (content as Array<{ type?: string; text?: string }>)
-      .filter((block) => block.type === "text" && block.text)
-      .map((block) => block.text!)
-      .join("\n");
-  }
-  return "";
-}
 
 function formatSessionName(key: string): string {
   const parts = key.split(":");
@@ -88,7 +76,6 @@ export function ChatPage() {
   const messages = useChatDockStore((s) => s.messages);
   const sessions = useChatDockStore((s) => s.sessions);
   const isStreaming = useChatDockStore((s) => s.isStreaming);
-  const streamingMessage = useChatDockStore((s) => s.streamingMessage);
   const isHistoryLoading = useChatDockStore((s) => s.isHistoryLoading);
   const error = useChatDockStore((s) => s.error);
   const clearError = useChatDockStore((s) => s.clearError);
@@ -112,13 +99,13 @@ export function ChatPage() {
   const targetAgentId = useChatDockStore((s) => s.targetAgentId);
 
   const agents = useOfficeStore((s) => s.agents);
+  const { streamingText, thinkingText } = useChatStreamingText();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const streamingText = extractStreamingText(streamingMessage);
   const canSend = (draft.trim().length > 0 || attachments.length > 0) && !isStreaming;
 
   useEffect(() => {
@@ -346,7 +333,7 @@ export function ChatPage() {
 
             <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto">
               <div className="mx-auto flex min-h-full w-full max-w-[52rem] flex-col px-6 py-6">
-                {messages.length === 0 && !isStreaming && !isHistoryLoading ? (
+                {messages.length === 0 && !isStreaming && !thinkingText && !isHistoryLoading ? (
                   <div className="flex flex-1 items-center justify-center">
                     <div className="text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500">
@@ -376,7 +363,7 @@ export function ChatPage() {
                         />
                       </div>
                     ))}
-                    {isStreaming && streamingText && (
+                    {isStreaming && (streamingText || thinkingText) && (
                       <MessageBubble
                         message={{
                           id: "__streaming__",
@@ -385,10 +372,11 @@ export function ChatPage() {
                           timestamp: Date.now(),
                           isStreaming: true,
                           authorAgentId: targetAgentId,
+                          thinking: thinkingText || undefined,
                         }}
                       />
                     )}
-                    {isStreaming && !streamingText && (
+                    {isStreaming && !streamingText && !thinkingText && (
                       <div className="mb-5 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         <span>{t("dock.thinkingStatus")}</span>

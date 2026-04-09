@@ -652,6 +652,23 @@ export class MockAdapter implements GatewayAdapter {
         event: "agent",
         payload: {
           runId,
+          seq: 0,
+          stream: "thinking",
+          ts: Date.now(),
+          sessionKey: params.sessionKey,
+          data: {
+            text: "Mock: weighing the request and planning a concise reply.\n",
+          },
+        },
+      });
+    }, 80);
+
+    this.scheduleTimer(() => {
+      this.emit("agent", {
+        type: "event",
+        event: "agent",
+        payload: {
+          runId,
           seq: 1,
           stream: "tool",
           ts: Date.now(),
@@ -714,7 +731,44 @@ export class MockAdapter implements GatewayAdapter {
           },
         },
       });
+    }, 950);
+
+    this.scheduleTimer(() => {
+      this.emit("agent", {
+        type: "event",
+        event: "agent",
+        payload: {
+          runId,
+          seq: 3,
+          stream: "tool",
+          ts: Date.now(),
+          sessionKey: params.sessionKey,
+          data: {
+            phase: "start",
+            name: "mock_list_files",
+            args: { path: "." },
+          },
+        },
+      });
     }, 1000);
+
+    this.scheduleTimer(() => {
+      this.emit("agent", {
+        type: "event",
+        event: "agent",
+        payload: {
+          runId,
+          seq: 4,
+          stream: "tool",
+          ts: Date.now(),
+          sessionKey: params.sessionKey,
+          data: {
+            phase: "end",
+            name: "mock_list_files",
+          },
+        },
+      });
+    }, 1080);
 
     this.scheduleTimer(() => {
       this.emit("chat", {
@@ -736,12 +790,12 @@ export class MockAdapter implements GatewayAdapter {
     }, 1200);
   }
 
-  async chatAbort(_runId: string): Promise<void> {
+  async chatAbort(sessionKeyOrRunId: string): Promise<void> {
     this.cancelPendingTimers();
     this.emit("chat", {
       type: "event",
       event: "chat",
-      payload: { state: "aborted", sessionKey: "agent:main:main" },
+      payload: { state: "aborted", sessionKey: sessionKeyOrRunId },
     });
   }
 

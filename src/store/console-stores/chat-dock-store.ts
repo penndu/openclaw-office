@@ -39,11 +39,27 @@ export interface ChatDockMessage {
   aborted?: boolean;
   authorAgentId?: string | null;
   collapsed?: boolean;
+  thinking?: string;
+}
+
+export interface SessionRuntime {
+  messages: ChatDockMessage[];
+  streamingMessage: Record<string, unknown> | null;
+  activeRunId: string | null;
+  isStreaming: boolean;
+  isHistoryLoaded: boolean;
+  isHistoryLoading: boolean;
+  queue: ChatQueueItem[];
+  hadToolEvents: boolean;
+  thinkingLevel: string | null;
 }
 
 interface ChatDockState {
   messages: ChatDockMessage[];
   isStreaming: boolean;
+  sessionStates: Map<string, SessionRuntime>;
+  hadToolEvents: boolean;
+  streamSegments: string[];
   currentSessionKey: string;
   dockExpanded: boolean;
   targetAgentId: string | null;
@@ -88,6 +104,294 @@ interface ChatDockState {
   setSearchQuery: (query: string) => void;
   togglePinMessage: (messageId: string) => void;
   exportCurrentSession: () => boolean;
+}
+
+export function createEmptySessionRuntime(): SessionRuntime {
+  return {
+    messages: [],
+    streamingMessage: null,
+    activeRunId: null,
+    isStreaming: false,
+    isHistoryLoaded: false,
+    isHistoryLoading: false,
+    queue: [],
+    hadToolEvents: false,
+    thinkingLevel: null,
+  };
+}
+
+function runtimeFromState(state: ChatDockState): SessionRuntime {
+  return {
+    messages: state.messages,
+    streamingMessage: state.streamingMessage,
+    activeRunId: state.activeRunId,
+    isStreaming: state.isStreaming,
+    isHistoryLoaded: state.isHistoryLoaded,
+    isHistoryLoading: state.isHistoryLoading,
+    queue: state.queue,
+    hadToolEvents: state.hadToolEvents,
+    thinkingLevel: state.thinkingLevel,
+  };
+}
+
+function applyRuntime(runtime: SessionRuntime): {
+  messages: ChatDockMessage[];
+  streamingMessage: Record<string, unknown> | null;
+  activeRunId: string | null;
+  isStreaming: boolean;
+  isHistoryLoaded: boolean;
+  isHistoryLoading: boolean;
+  queue: ChatQueueItem[];
+  hadToolEvents: boolean;
+  thinkingLevel: string | null;
+} {
+  return {
+    messages: runtime.messages,
+    streamingMessage: runtime.streamingMessage,
+    activeRunId: runtime.activeRunId,
+    isStreaming: runtime.isStreaming,
+    isHistoryLoaded: runtime.isHistoryLoaded,
+    isHistoryLoading: runtime.isHistoryLoading,
+    queue: runtime.queue,
+    hadToolEvents: runtime.hadToolEvents,
+    thinkingLevel: runtime.thinkingLevel,
+  };
+}
+
+function shouldReloadHistoryForFinalEvent(hadToolEvents: boolean): boolean {
+  return hadToolEvents;
+}
+
+interface ApplyChatEventContext {
+  authorAgentId: string | null;
+}
+
+interface ApplyChatEventResult {
+  runtime: SessionRuntime;
+  persist: boolean;
+  reloadHistory: boolean;
+  error: string | null;
+  processQueue: boolean;
+}
+
+function applyChatEventToRuntime(
+  base: SessionRuntime,
+  event: Record<string, unknown>,
+  ctx: ApplyChatEventContext,
+): ApplyChatEventResult {
+  const eventState = String(event.state || "");
+  const runId = String(event.runId || "");
+  const message = event.message as Record<string, unknown> | undefined;
+
+  let resolvedState = eventState;
+  if (!resolvedState && message) {
+    const stopReason = message.stopReason ?? message.stop_reason;
+    if (stopReason) {
+      resolvedState = "final";
+    } else if (message.role || message.content) {
+      resolvedState = "delta";
+    }
+  }
+
+  switch (resolvedState) {
+    case "delta": {
+      if (!message) {
+        return {
+          runtime: base,
+          persist: false,
+          reloadHistory: false,
+          error: null,
+          processQueue: false,
+        };
+      }
+      const isNewRun = Boolean(runId && runId !== base.activeRunId);
+      return {
+        runtime: {
+          ...base,
+          streamingMessage: message,
+          activeRunId: runId || base.activeRunId,
+          isStreaming: true,
+          hadToolEvents: isNewRun ? false : base.hadToolEvents,
+        },
+        persist: false,
+        reloadHistory: false,
+        error: null,
+        processQueue: false,
+      };
+    }
+    case "final": {
+      const assistantText = message ? extractText(message.content ?? message.text ?? "") : "";
+      if (assistantText) {
+        const appended = appendAssistantSegment(
+          base.messages,
+          assistantText,
+          runId || null,
+          ctx.authorAgentId,
+          message,
+        );
+        return {
+          runtime: {
+            ...base,
+            messages: appended,
+            isStreaming: false,
+            streamingMessage: null,
+            activeRunId: null,
+            hadToolEvents: false,
+          },
+          persist: true,
+          reloadHistory: false,
+          error: null,
+          processQueue: true,
+        };
+      }
+      return {
+        runtime: {
+          ...base,
+          isStreaming: false,
+          streamingMessage: null,
+          activeRunId: null,
+          hadToolEvents: false,
+        },
+        persist: false,
+        reloadHistory: shouldReloadHistoryForFinalEvent(base.hadToolEvents),
+        error: null,
+        processQueue: true,
+      };
+    }
+    case "error": {
+      const errorMsg = String(event.errorMessage || i18n.t("common:errors.errorOccurred"));
+      return {
+        runtime: {
+          ...base,
+          isStreaming: false,
+          streamingMessage: null,
+          activeRunId: null,
+        },
+        persist: false,
+        reloadHistory: false,
+        error: errorMsg,
+        processQueue: false,
+      };
+    }
+    case "aborted": {
+      return {
+        runtime: {
+          ...base,
+          isStreaming: false,
+          streamingMessage: null,
+          activeRunId: null,
+        },
+        persist: false,
+        reloadHistory: true,
+        error: null,
+        processQueue: true,
+      };
+    }
+    default: {
+      if (base.isStreaming && message) {
+        return {
+          runtime: { ...base, streamingMessage: message },
+          persist: false,
+          reloadHistory: false,
+          error: null,
+          processQueue: false,
+        };
+      }
+      return {
+        runtime: base,
+        persist: false,
+        reloadHistory: false,
+        error: null,
+        processQueue: false,
+      };
+    }
+  }
+}
+
+function applyThinkingDeltaToStreamingMessage(
+  prev: Record<string, unknown> | null,
+  delta: string,
+): Record<string, unknown> {
+  const base: Record<string, unknown> = prev ? { ...prev } : { role: "assistant", content: "" };
+  const prevThinking = typeof base.thinking === "string" ? base.thinking : "";
+  return { ...base, thinking: prevThinking + delta };
+}
+
+function applyToolAgentEventSlice(
+  messages: ChatDockMessage[],
+  streamingMessage: Record<string, unknown> | null,
+  activeRunId: string | null,
+  event: AgentEventPayload,
+  authorAgentId: string | null,
+): { messages: ChatDockMessage[]; streamingMessage: Record<string, unknown> | null } {
+  const phase = typeof event.data.phase === "string" ? event.data.phase : "";
+  const name = typeof event.data.name === "string" ? event.data.name : "unknown";
+  const args = event.data.args as Record<string, unknown> | undefined;
+  const toolCallStatus = phase === "start" ? "running" : "done";
+  const toolCall: ToolCallInfo = {
+    id: `${event.runId}:${event.seq}`,
+    name,
+    args,
+    status: toolCallStatus,
+  };
+
+  const currentStreamingText = extractText(streamingMessage?.content ?? streamingMessage?.text ?? "");
+  const nextMessages =
+    phase === "start"
+      ? appendAssistantSegment(
+          messages,
+          currentStreamingText,
+          activeRunId ?? event.runId,
+          authorAgentId,
+          streamingMessage ?? undefined,
+        )
+      : [...messages];
+  const existingIndex = findLatestToolMessageIndex(nextMessages, event.runId, name);
+  if (existingIndex >= 0) {
+    const mergedMessages = [...nextMessages];
+    const existing = mergedMessages[existingIndex]!;
+    mergedMessages[existingIndex] = {
+      ...existing,
+      content:
+        phase === "start"
+          ? i18n.t("chat:toolActivity.calling", { name })
+          : i18n.t("chat:toolActivity.finished", { name }),
+      timestamp: Date.now(),
+      collapsed: toolCallStatus !== "running",
+      toolCalls: (existing.toolCalls ?? []).map((existingToolCall) =>
+        existingToolCall.name === name
+          ? {
+              ...existingToolCall,
+              args: args ?? existingToolCall.args,
+              status: toolCallStatus,
+            }
+          : existingToolCall,
+      ),
+    };
+    return {
+      messages: mergedMessages,
+      streamingMessage: phase === "start" ? null : streamingMessage,
+    };
+  }
+
+  return {
+    messages: [
+      ...nextMessages,
+      {
+        ...buildSystemMessage(
+          phase === "start"
+            ? i18n.t("chat:toolActivity.calling", { name })
+            : i18n.t("chat:toolActivity.finished", { name }),
+          "tool",
+        ),
+        authorAgentId,
+        runId: event.runId,
+        collapsed: toolCallStatus !== "running",
+        toolCalls: [toolCall],
+      },
+    ],
+    streamingMessage: phase === "start" ? null : streamingMessage,
+  };
 }
 
 function buildSessionKey(agentId: string): string {
@@ -220,6 +524,21 @@ function extractText(content: unknown): string {
   return "";
 }
 
+function extractThinkingFromHistoryMessage(message: Record<string, unknown>): string | undefined {
+  if (typeof message.thinking === "string" && message.thinking.trim()) {
+    return message.thinking.trim();
+  }
+  const content = message.content;
+  if (Array.isArray(content)) {
+    const blocks = content as Array<{ type?: string; text?: string; thinking?: string }>;
+    const parts = blocks
+      .filter((b) => b.type === "thinking" && (b.text || b.thinking))
+      .map((b) => b.text || b.thinking || "");
+    if (parts.length > 0) return parts.join("\n");
+  }
+  return undefined;
+}
+
 function normalizeRole(role: unknown): MessageRole {
   return role === "user" || role === "assistant" || role === "system" ? role : "assistant";
 }
@@ -290,6 +609,7 @@ function normalizeHistoryMessage(message: Record<string, unknown>): ChatDockMess
     attachments: extractAttachments(message),
     toolCalls,
     kind: inferredKind,
+    thinking: extractThinkingFromHistoryMessage(message),
     // Completed tool messages in history should be collapsed by default
     collapsed: typeof message.collapsed === "boolean" ? message.collapsed : inferredKind === "tool" ? true : undefined,
     authorAgentId: typeof message.authorAgentId === "string" ? message.authorAgentId : null,
@@ -373,6 +693,7 @@ function buildAssistantMessage(
   authorAgentId: string | null,
   source?: Record<string, unknown>,
 ): ChatDockMessage {
+  const thinking = source ? extractThinkingFromHistoryMessage(source) : undefined;
   return {
     id: String(source?.id ?? generateMessageId()),
     role: "assistant",
@@ -383,6 +704,7 @@ function buildAssistantMessage(
     runId,
     aborted: Boolean(source?.aborted),
     authorAgentId,
+    thinking,
   };
 }
 
@@ -625,9 +947,113 @@ async function executeSlashCommand(
   }
 }
 
-export const useChatDockStore = create<ChatDockState>((set, get) => ({
+export const useChatDockStore = create<ChatDockState>((set, get) => {
+  const sendToSessionKey = async (sessionKey: string, text: string, attachments: ChatAttachment[]) => {
+    const trimmed = text.trim();
+    if (!trimmed && attachments.length === 0) return;
+    const targetAgentIdForSession =
+      resolveSessionAgentId(sessionKey, get().sessions) ?? inferAgentIdFromSessionKey(sessionKey);
+    const userMsg: ChatDockMessage = {
+      id: generateMessageId(),
+      role: "user",
+      content: trimmed,
+      timestamp: Date.now(),
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
+    set((state) => {
+      const map = new Map(state.sessionStates);
+      const rt = map.get(sessionKey) ?? createEmptySessionRuntime();
+      const nextSessions = touchSession(
+        state.sessions,
+        sessionKey,
+        targetAgentIdForSession,
+        rt.messages.length + 1,
+      );
+      map.set(sessionKey, {
+        ...rt,
+        messages: [...rt.messages, userMsg],
+        isStreaming: true,
+        streamingMessage: null,
+      });
+      return { sessionStates: map, sessions: nextSessions };
+    });
+    void localPersistence.saveMessage(sessionKey, userMsg);
+    const msgs = get().sessionStates.get(sessionKey)?.messages ?? [];
+    serverPersistence.saveMessages(sessionKey, msgs, targetAgentIdForSession);
+    persistSessions(get().sessions);
+    try {
+      await withAdapter((adapter) =>
+        adapter.chatSend({
+          text: trimmed,
+          sessionKey,
+          attachments,
+        }),
+      );
+    } catch (err) {
+      set((state) => {
+        if (state.currentSessionKey !== sessionKey) {
+          const map = new Map(state.sessionStates);
+          const r = map.get(sessionKey);
+          if (r) map.set(sessionKey, { ...r, isStreaming: false });
+          return { sessionStates: map };
+        }
+        return { error: String(err), isStreaming: false };
+      });
+    }
+  };
+
+  const reloadHistoryForBackgroundSession = async (sessionKey: string) => {
+    try {
+      const result = await withAdapter((adapter) => adapter.chatHistory(sessionKey));
+      const authorAgentId =
+        resolveSessionAgentId(sessionKey, get().sessions) ?? inferAgentIdFromSessionKey(sessionKey);
+      const messages = normalizeHistoryMessages(
+        result.messages as unknown as Record<string, unknown>[],
+        authorAgentId,
+      );
+      set((state) => {
+        const map = new Map(state.sessionStates);
+        const rt = map.get(sessionKey) ?? createEmptySessionRuntime();
+        map.set(sessionKey, {
+          ...rt,
+          messages,
+          isHistoryLoaded: true,
+          isHistoryLoading: false,
+          thinkingLevel: result.thinkingLevel ?? rt.thinkingLevel,
+        });
+        return { sessionStates: map };
+      });
+      void localPersistence.saveMessages(sessionKey, messages);
+      serverPersistence.saveMessagesImmediate(sessionKey, messages, authorAgentId);
+    } catch {
+      // Background history refresh is best-effort.
+    }
+  };
+
+  const dequeueAndProcessQueue = (eventSessionKey: string) => {
+    const state = get();
+    if (eventSessionKey !== state.currentSessionKey) {
+      const map = new Map(state.sessionStates);
+      const rt = map.get(eventSessionKey);
+      const next = rt?.queue[0];
+      if (!next || !rt) return;
+      map.set(eventSessionKey, { ...rt, queue: rt.queue.slice(1) });
+      set({ sessionStates: map });
+      void sendToSessionKey(eventSessionKey, next.text, next.attachments);
+      return;
+    }
+    const head = state.queue[0];
+    if (!head) return;
+    set((s) => ({ queue: s.queue.slice(1) }));
+    void get().sendMessage(head.text, head.attachments);
+  };
+
+  return {
   messages: [],
   isStreaming: false,
+  sessionStates: new Map(),
+  hadToolEvents: false,
+  streamSegments: [],
   currentSessionKey: "agent:main:main",
   dockExpanded: false,
   targetAgentId: null,
@@ -656,6 +1082,7 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       return;
     }
 
+    // Queue when the active session has an in-flight assistant response (top-level state is always current session).
     if (get().isStreaming) {
       set((state) => ({
         queue: [
@@ -743,26 +1170,53 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
   },
 
   switchSession: (key) => {
-    const targetAgentId = resolveSessionAgentId(key, get().sessions);
+    const state = get();
+    const savedMap = new Map(state.sessionStates);
+    savedMap.set(state.currentSessionKey, runtimeFromState(state));
+
+    const targetAgentId = resolveSessionAgentId(key, state.sessions);
     storeWorkspaceSessionKey(key);
+
+    const restored = savedMap.get(key);
+    if (restored !== undefined) {
+      const applied = applyRuntime(restored);
+      set({
+        currentSessionKey: key,
+        targetAgentId,
+        ...applied,
+        sessionStates: savedMap,
+        hadToolEvents: restored.hadToolEvents,
+        streamSegments: [],
+        error: null,
+        draft: "",
+        attachments: [],
+      });
+      if (!restored.isHistoryLoaded && !restored.isHistoryLoading) {
+        void get().initializeHistory();
+      }
+      return;
+    }
+
     set({
       currentSessionKey: key,
       targetAgentId,
-      messages: [],
-      streamingMessage: null,
-      activeRunId: null,
+      ...applyRuntime(createEmptySessionRuntime()),
+      sessionStates: savedMap,
+      hadToolEvents: false,
+      streamSegments: [],
       error: null,
-      isStreaming: false,
-      isHistoryLoaded: false,
       draft: "",
       attachments: [],
-      queue: [],
     });
     void get().initializeHistory();
   },
 
   newSession: (agentId) => {
-    const resolvedAgentId = agentId ?? get().targetAgentId ?? "main";
+    const state = get();
+    const savedMap = new Map(state.sessionStates);
+    savedMap.set(state.currentSessionKey, runtimeFromState(state));
+
+    const resolvedAgentId = agentId ?? state.targetAgentId ?? "main";
     const newKey = `agent:${resolvedAgentId}:session-${Date.now()}`;
     const sessions = [
       {
@@ -773,7 +1227,7 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
         lastActiveAt: Date.now(),
         messageCount: 0,
       },
-      ...get().sessions.filter((session) => session.key !== newKey),
+      ...state.sessions.filter((session) => session.key !== newKey),
     ].map(normalizeSession);
     set({
       currentSessionKey: newKey,
@@ -789,6 +1243,9 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       attachments: [],
       queue: [],
       thinkingLevel: null,
+      hadToolEvents: false,
+      streamSegments: [],
+      sessionStates: savedMap,
       sessions,
     });
     storeWorkspaceSessionKey(newKey);
@@ -949,20 +1406,26 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
   },
 
   setTargetAgent: (agentId) => {
+    const state = get();
+    const savedMap = new Map(state.sessionStates);
+    savedMap.set(state.currentSessionKey, runtimeFromState(state));
+
     const storedSessionKey = getStoredWorkspaceSessionKey();
     const storedAgentId =
       storedSessionKey && isWorkspaceChatSessionKey(storedSessionKey)
-        ? resolveSessionAgentId(storedSessionKey, get().sessions)
+        ? resolveSessionAgentId(storedSessionKey, state.sessions)
         : null;
     const sessionKey =
-      storedSessionKey && storedAgentId === agentId ? storedSessionKey : selectPreferredSessionKey(agentId, get().sessions);
+      storedSessionKey && storedAgentId === agentId ? storedSessionKey : selectPreferredSessionKey(agentId, state.sessions);
     if (sessionKey === buildSessionKey(agentId)) {
+      set({ sessionStates: savedMap });
       get().newSession(agentId);
       return;
     }
 
     storeWorkspaceSessionKey(sessionKey);
     set({
+      sessionStates: savedMap,
       targetAgentId: agentId,
       currentSessionKey: sessionKey,
       messages: [],
@@ -971,6 +1434,8 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       error: null,
       isStreaming: false,
       isHistoryLoaded: false,
+      hadToolEvents: false,
+      streamSegments: [],
     });
     void get().initializeHistory();
   },
@@ -980,194 +1445,157 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
       typeof event.sessionKey === "string" && event.sessionKey.length > 0
         ? event.sessionKey
         : get().currentSessionKey;
-    if (eventSessionKey !== get().currentSessionKey) {
-      return;
+    const currentKey = get().currentSessionKey;
+    const isCurrent = eventSessionKey === currentKey;
+    const authorAgentId =
+      resolveSessionAgentId(eventSessionKey, get().sessions) ??
+      (isCurrent ? get().targetAgentId : inferAgentIdFromSessionKey(eventSessionKey));
+
+    const base: SessionRuntime = isCurrent
+      ? runtimeFromState(get())
+      : (get().sessionStates.get(eventSessionKey) ?? createEmptySessionRuntime());
+
+    const outcome = applyChatEventToRuntime(base, event, { authorAgentId });
+
+    if (isCurrent) {
+      set((state) => {
+        const sessionsUpdate = outcome.persist
+          ? touchSession(
+              state.sessions,
+              currentKey,
+              state.targetAgentId,
+              outcome.runtime.messages.length,
+            )
+          : state.sessions;
+        return {
+          ...applyRuntime(outcome.runtime),
+          sessionStates: state.sessionStates,
+          hadToolEvents: outcome.runtime.hadToolEvents,
+          streamSegments: [],
+          sessions: sessionsUpdate,
+          ...(outcome.error ? { error: outcome.error } : {}),
+        };
+      });
+      if (outcome.persist) {
+        persistSessions(get().sessions);
+        const { messages, targetAgentId: agentIdPersist } = get();
+        void localPersistence.saveMessages(currentKey, messages);
+        serverPersistence.saveMessagesImmediate(currentKey, messages, agentIdPersist);
+      }
+    } else {
+      set((state) => {
+        const map = new Map(state.sessionStates);
+        map.set(eventSessionKey, outcome.runtime);
+        const agentForTouch =
+          resolveSessionAgentId(eventSessionKey, state.sessions) ?? inferAgentIdFromSessionKey(eventSessionKey);
+        const sessionsNext = outcome.persist
+          ? touchSession(state.sessions, eventSessionKey, agentForTouch, outcome.runtime.messages.length)
+          : state.sessions;
+        return { sessionStates: map, sessions: sessionsNext };
+      });
+      if (outcome.persist) {
+        persistSessions(get().sessions);
+        const rt = get().sessionStates.get(eventSessionKey);
+        if (rt) {
+          const agentForTouch =
+            resolveSessionAgentId(eventSessionKey, get().sessions) ?? inferAgentIdFromSessionKey(eventSessionKey);
+          void localPersistence.saveMessages(eventSessionKey, rt.messages);
+          serverPersistence.saveMessages(eventSessionKey, rt.messages, agentForTouch);
+        }
+      }
     }
 
-    const eventState = String(event.state || "");
-    const runId = String(event.runId || "");
-    const message = event.message as Record<string, unknown> | undefined;
-
-    let resolvedState = eventState;
-    if (!resolvedState && message) {
-      const stopReason = message.stopReason ?? message.stop_reason;
-      if (stopReason) {
-        resolvedState = "final";
-      } else if (message.role || message.content) {
-        resolvedState = "delta";
-      }
+    if (outcome.reloadHistory && isCurrent) {
+      void get().loadHistory();
+    } else if (outcome.reloadHistory && !isCurrent) {
+      void reloadHistoryForBackgroundSession(eventSessionKey);
     }
 
-    switch (resolvedState) {
-      case "delta": {
-        if (message) {
-          set({
-            streamingMessage: message,
-            activeRunId: runId || get().activeRunId,
-            isStreaming: true,
-          });
-        }
-        break;
-      }
-      case "final": {
-        const assistantText = message ? extractText(message.content ?? message.text ?? "") : "";
-        if (assistantText) {
-          const authorAgentId =
-            resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId;
-          const nextSessions = touchSession(
-            get().sessions,
-            get().currentSessionKey,
-            get().targetAgentId,
-            get().messages.length + 1,
-          );
-          set((state) => ({
-            messages: appendAssistantSegment(
-              state.messages,
-              assistantText,
-              runId || null,
-              authorAgentId,
-              message,
-            ),
-            sessions: nextSessions,
-            isStreaming: false,
-            streamingMessage: null,
-            activeRunId: null,
-          }));
-          const { currentSessionKey, messages, targetAgentId: agentId } = get();
-          void localPersistence.saveMessages(currentSessionKey, messages);
-          serverPersistence.saveMessagesImmediate(currentSessionKey, messages, agentId);
-          persistSessions(nextSessions);
-        } else {
-          set({
-            isStreaming: false,
-            streamingMessage: null,
-            activeRunId: null,
-          });
-          void get().loadHistory();
-        }
-        const next = get().queue[0];
-        if (next) {
-          set((state) => ({ queue: state.queue.slice(1) }));
-          void get().sendMessage(next.text, next.attachments);
-        }
-        break;
-      }
-      case "error": {
-        const errorMsg = String(event.errorMessage || i18n.t("common:errors.errorOccurred"));
-        set({
-          error: errorMsg,
-          isStreaming: false,
-          streamingMessage: null,
-          activeRunId: null,
-        });
-        break;
-      }
-      case "aborted": {
-        set({
-          isStreaming: false,
-          streamingMessage: null,
-          activeRunId: null,
-        });
-        void get().loadHistory();
-        const next = get().queue[0];
-        if (next) {
-          set((state) => ({ queue: state.queue.slice(1) }));
-          void get().sendMessage(next.text, next.attachments);
-        }
-        break;
-      }
-      default: {
-        if (get().isStreaming && message) {
-          set({ streamingMessage: message });
-        }
-      }
+    if (outcome.processQueue) {
+      dequeueAndProcessQueue(eventSessionKey);
     }
   },
 
   handleAgentEvent: (event) => {
-    if (event.sessionKey && event.sessionKey !== get().currentSessionKey) {
-      return;
-    }
-    if (event.stream !== "tool") {
-      return;
-    }
-    const phase = typeof event.data.phase === "string" ? event.data.phase : "";
-    const name = typeof event.data.name === "string" ? event.data.name : "unknown";
-    const args = event.data.args as Record<string, unknown> | undefined;
-    const toolCallStatus = phase === "start" ? "running" : "done";
+    const eventSessionKey = event.sessionKey ?? get().currentSessionKey;
+    const isCurrent = eventSessionKey === get().currentSessionKey;
     const authorAgentId =
-      resolveSessionAgentId(get().currentSessionKey, get().sessions) ?? get().targetAgentId;
-    const toolCall: ToolCallInfo = {
-      id: `${event.runId}:${event.seq}`,
-      name,
-      args,
-      status: toolCallStatus,
-    };
+      resolveSessionAgentId(eventSessionKey, get().sessions) ??
+      (isCurrent ? get().targetAgentId : inferAgentIdFromSessionKey(eventSessionKey));
 
-    set((state) => {
-      const currentStreamingText = extractText(
-        state.streamingMessage?.content ?? state.streamingMessage?.text ?? "",
-      );
-      const nextMessages =
-        phase === "start"
-          ? appendAssistantSegment(
-              state.messages,
-              currentStreamingText,
-              state.activeRunId ?? event.runId,
-              authorAgentId,
-              state.streamingMessage ?? undefined,
-            )
-          : [...state.messages];
-      const existingIndex = findLatestToolMessageIndex(nextMessages, event.runId, name);
-      if (existingIndex >= 0) {
-        const mergedMessages = [...nextMessages];
-        const existing = mergedMessages[existingIndex]!;
-        mergedMessages[existingIndex] = {
-          ...existing,
-          content:
-            phase === "start"
-              ? i18n.t("chat:toolActivity.calling", { name })
-              : i18n.t("chat:toolActivity.finished", { name }),
-          timestamp: Date.now(),
-          collapsed: toolCallStatus !== "running",
-          toolCalls: (existing.toolCalls ?? []).map((existingToolCall) =>
-            existingToolCall.name === name
-              ? {
-                  ...existingToolCall,
-                  args: args ?? existingToolCall.args,
-                  status: toolCallStatus,
-                }
-              : existingToolCall,
-          ),
-        };
-        return {
-          messages: mergedMessages,
-          streamingMessage: phase === "start" ? null : state.streamingMessage,
-        };
+    if (event.stream === "thinking") {
+      const delta =
+        (typeof event.data.text === "string" ? event.data.text : "") ||
+        (typeof event.data.thinking === "string" ? event.data.thinking : "");
+      if (!delta) return;
+
+      if (isCurrent) {
+        set((state) => ({
+          streamingMessage: applyThinkingDeltaToStreamingMessage(state.streamingMessage, delta),
+          isStreaming: true,
+        }));
+      } else {
+        set((state) => {
+          const map = new Map(state.sessionStates);
+          const rt = map.get(eventSessionKey) ?? createEmptySessionRuntime();
+          map.set(eventSessionKey, {
+            ...rt,
+            streamingMessage: applyThinkingDeltaToStreamingMessage(rt.streamingMessage, delta),
+            isStreaming: true,
+          });
+          return { sessionStates: map };
+        });
       }
+      return;
+    }
 
-      return {
-        messages: [
-          ...nextMessages,
-          {
-            ...buildSystemMessage(
-              phase === "start"
-                ? i18n.t("chat:toolActivity.calling", { name })
-                : i18n.t("chat:toolActivity.finished", { name }),
-              "tool",
-            ),
-            authorAgentId,
-            runId: event.runId,
-            collapsed: toolCallStatus !== "running",
-            toolCalls: [toolCall],
-          },
-        ],
-        streamingMessage: phase === "start" ? null : state.streamingMessage,
-      };
-    });
-    const { currentSessionKey: sk, messages: msgs, targetAgentId: aid } = get();
-    void localPersistence.saveMessages(sk, msgs);
-    serverPersistence.saveMessages(sk, msgs, aid);
+    if (event.stream !== "tool") return;
+
+    if (isCurrent) {
+      set((state) => {
+        const slice = applyToolAgentEventSlice(
+          state.messages,
+          state.streamingMessage,
+          state.activeRunId,
+          event,
+          authorAgentId,
+        );
+        return {
+          messages: slice.messages,
+          streamingMessage: slice.streamingMessage,
+          hadToolEvents: true,
+        };
+      });
+      const { currentSessionKey: sk, messages: msgs, targetAgentId: aid } = get();
+      void localPersistence.saveMessages(sk, msgs);
+      serverPersistence.saveMessages(sk, msgs, aid);
+    } else {
+      set((state) => {
+        const map = new Map(state.sessionStates);
+        const rt = map.get(eventSessionKey) ?? createEmptySessionRuntime();
+        const slice = applyToolAgentEventSlice(
+          rt.messages,
+          rt.streamingMessage,
+          rt.activeRunId,
+          event,
+          authorAgentId,
+        );
+        map.set(eventSessionKey, {
+          ...rt,
+          messages: slice.messages,
+          streamingMessage: slice.streamingMessage,
+          hadToolEvents: true,
+        });
+        return { sessionStates: map };
+      });
+      const rt = get().sessionStates.get(eventSessionKey);
+      if (rt) {
+        const agentForTouch =
+          resolveSessionAgentId(eventSessionKey, get().sessions) ?? inferAgentIdFromSessionKey(eventSessionKey);
+        void localPersistence.saveMessages(eventSessionKey, rt.messages);
+        serverPersistence.saveMessages(eventSessionKey, rt.messages, agentForTouch);
+      }
+    }
   },
 
   clearError: () => set({ error: null }),
@@ -1222,4 +1650,5 @@ export const useChatDockStore = create<ChatDockState>((set, get) => ({
     })),
 
   exportCurrentSession: () => exportChatTranscriptMarkdown(get().messages, get().currentSessionKey),
-}));
+  };
+});

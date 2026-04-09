@@ -1,4 +1,15 @@
 {
+  "thinking": {
+    "title": "Thinking",
+    "expand": "Show thinking",
+    "collapse": "Hide thinking"
+  },
+  "connection": {
+    "disconnected": "Disconnected",
+    "reconnecting": "Reconnecting...",
+    "failed": "Cannot connect to Gateway",
+    "retry": "Reconnect"
+  },
   "dock": {
     "collapseDock": "Collapse chat",
     "expandDock": "Expand chat",

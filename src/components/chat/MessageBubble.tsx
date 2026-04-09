@@ -6,6 +6,8 @@ import { useOfficeStore } from "@/store/office-store";
 import type { ChatDockMessage } from "@/store/console-stores/chat-dock-store";
 import { MarkdownContent } from "./MarkdownContent";
 import { StreamingIndicator } from "./StreamingIndicator";
+import { StreamingMarkdownContent } from "./StreamingMarkdownContent";
+import { ThinkingBlock } from "./ThinkingBlock";
 
 interface MessageBubbleProps {
   message: ChatDockMessage;
@@ -204,7 +206,14 @@ export const MessageBubble = memo(function MessageBubble({
               <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
             ) : (
               <>
-                <MarkdownContent content={message.content} />
+                {message.thinking ? (
+                  <ThinkingBlock thinking={message.thinking} isStreaming={Boolean(message.isStreaming)} />
+                ) : null}
+                {message.isStreaming ? (
+                  <StreamingMarkdownContent content={message.content} isStreaming />
+                ) : (
+                  <MarkdownContent content={message.content} />
+                )}
                 {message.isStreaming && <StreamingIndicator />}
               </>
             )}

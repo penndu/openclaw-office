@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { __resetAdapterForTests, getAdapter, initAdapter } from "@/gateway/adapter-provider";
 import { localPersistence } from "@/lib/local-persistence";
-import { useChatDockStore } from "../console-stores/chat-dock-store";
+import { useChatDockStore, createEmptySessionRuntime } from "../console-stores/chat-dock-store";
 
 function resetChatStore() {
   localStorage.removeItem("openclaw-office-chat-page:last-session");
   useChatDockStore.setState({
     messages: [],
     isStreaming: false,
+    sessionStates: new Map(),
+    hadToolEvents: false,
+    streamSegments: [],
     currentSessionKey: "agent:main:main",
     dockExpanded: false,
     targetAgentId: null,
@@ -257,5 +260,134 @@ describe("Chat workspace store", () => {
     expect(state.messages[1]?.toolCalls?.[0]?.status).toBe("done");
     expect(state.messages[2]?.role).toBe("assistant");
     expect(state.messages[2]?.content).toContain("接着给出修改建议");
+  });
+
+  it("accumulates thinking deltas on streamingMessage", () => {
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "run-think",
+      seq: 0,
+      stream: "thinking",
+      ts: Date.now(),
+      sessionKey: "agent:main:main",
+      data: { text: "let me " },
+    });
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "run-think",
+      seq: 1,
+      stream: "thinking",
+      ts: Date.now(),
+      sessionKey: "agent:main:main",
+      data: { text: "think..." },
+    });
+
+    const state = useChatDockStore.getState();
+    expect(state.isStreaming).toBe(true);
+    expect(state.streamingMessage?.thinking).toBe("let me think...");
+  });
+
+  it("routes chat events to background session without affecting current", () => {
+    useChatDockStore.setState({ currentSessionKey: "agent:main:main" });
+
+    useChatDockStore.getState().handleChatEvent({
+      sessionKey: "agent:coder:session-bg",
+      state: "delta",
+      runId: "bg-run",
+      message: { role: "assistant", content: "background reply" },
+    });
+
+    const state = useChatDockStore.getState();
+    expect(state.messages).toHaveLength(0);
+    expect(state.isStreaming).toBe(false);
+
+    const bgRuntime = state.sessionStates.get("agent:coder:session-bg");
+    expect(bgRuntime).toBeDefined();
+    expect(bgRuntime?.isStreaming).toBe(true);
+    expect(bgRuntime?.streamingMessage?.content).toBe("background reply");
+  });
+
+  it("routes thinking events to background session", () => {
+    useChatDockStore.setState({ currentSessionKey: "agent:main:main" });
+
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "bg-run",
+      seq: 0,
+      stream: "thinking",
+      ts: Date.now(),
+      sessionKey: "agent:coder:session-bg",
+      data: { text: "bg thinking" },
+    });
+
+    const state = useChatDockStore.getState();
+    expect(state.streamingMessage).toBeNull();
+    const bgRuntime = state.sessionStates.get("agent:coder:session-bg");
+    expect(bgRuntime?.streamingMessage?.thinking).toBe("bg thinking");
+  });
+
+  it("preserves background session state across switchSession", () => {
+    const savedMap = new Map();
+    savedMap.set("agent:coder:session-1", {
+      ...createEmptySessionRuntime(),
+      messages: [{ id: "c1", role: "assistant", content: "coder reply", timestamp: 2 }],
+      isHistoryLoaded: true,
+    });
+
+    useChatDockStore.setState({
+      currentSessionKey: "agent:main:main",
+      messages: [{ id: "m1", role: "user", content: "hello", timestamp: 1 }],
+      isHistoryLoaded: true,
+      sessionStates: savedMap,
+      sessions: [
+        { key: "agent:main:main", agentId: "main", label: "main", createdAt: 1, lastActiveAt: 2, messageCount: 1 },
+        { key: "agent:coder:session-1", agentId: "coder", label: "coder", createdAt: 1, lastActiveAt: 3, messageCount: 1 },
+      ],
+    });
+
+    useChatDockStore.getState().switchSession("agent:coder:session-1");
+    expect(useChatDockStore.getState().messages).toHaveLength(1);
+    expect(useChatDockStore.getState().messages[0]?.content).toBe("coder reply");
+
+    useChatDockStore.getState().switchSession("agent:main:main");
+    expect(useChatDockStore.getState().messages).toHaveLength(1);
+    expect(useChatDockStore.getState().messages[0]?.content).toBe("hello");
+  });
+
+  it("routes tool events to background session", () => {
+    useChatDockStore.setState({ currentSessionKey: "agent:main:main" });
+
+    useChatDockStore.getState().handleAgentEvent({
+      runId: "bg-tool-run",
+      seq: 1,
+      stream: "tool",
+      ts: Date.now(),
+      sessionKey: "agent:coder:session-bg",
+      data: { phase: "start", name: "search", args: { q: "test" } },
+    });
+
+    const state = useChatDockStore.getState();
+    expect(state.messages).toHaveLength(0);
+    const bgRuntime = state.sessionStates.get("agent:coder:session-bg");
+    expect(bgRuntime?.messages).toHaveLength(1);
+    expect(bgRuntime?.messages[0]?.kind).toBe("tool");
+    expect(bgRuntime?.hadToolEvents).toBe(true);
+  });
+
+  it("newSession saves current state and starts fresh", () => {
+    useChatDockStore.setState({
+      currentSessionKey: "agent:main:main",
+      messages: [{ id: "m1", role: "user", content: "msg", timestamp: 1 }],
+      isStreaming: true,
+    });
+
+    useChatDockStore.getState().newSession("main");
+
+    const state = useChatDockStore.getState();
+    expect(state.currentSessionKey).toContain("agent:main:session-");
+    expect(state.messages).toHaveLength(0);
+    expect(state.isStreaming).toBe(false);
+
+    const saved = state.sessionStates.get("agent:main:main");
+    expect(saved).toBeDefined();
+    expect(saved?.messages).toHaveLength(1);
+    expect(saved?.isStreaming).toBe(true);
   });
 });

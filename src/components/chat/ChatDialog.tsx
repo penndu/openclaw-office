@@ -2,6 +2,8 @@ import { ArrowDown, Loader2, Minimize2, Paperclip, Send, Square } from "lucide-r
 import { useRef, useEffect, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TextareaAutosize from "react-textarea-autosize";
+import { useChatStreamingText } from "@/hooks/useChatStreamingText";
+import { useOfficeStore } from "@/store/office-store";
 import { useChatDockStore, type ChatDockMessage } from "@/store/console-stores/chat-dock-store";
 import { AgentSelector } from "./AgentSelector";
 import { MessageBubble } from "./MessageBubble";
@@ -25,25 +27,14 @@ function getStoredHeight(): number {
   return DEFAULT_HEIGHT;
 }
 
-function extractStreamingText(streamingMessage: Record<string, unknown> | null): string {
-  if (!streamingMessage) return "";
-  const content = streamingMessage.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return (content as Array<{ type?: string; text?: string }>)
-      .filter((b) => b.type === "text" && b.text)
-      .map((b) => b.text!)
-      .join("\n");
-  }
-  return "";
-}
-
 export function ChatDialog() {
   const { t } = useTranslation("chat");
   const dockExpanded = useChatDockStore((s) => s.dockExpanded);
   const messages = useChatDockStore((s) => s.messages);
   const isStreaming = useChatDockStore((s) => s.isStreaming);
-  const streamingMessage = useChatDockStore((s) => s.streamingMessage);
+  const { streamingText, thinkingText } = useChatStreamingText();
+  const connectionStatus = useOfficeStore((s) => s.connectionStatus);
+  const connectionError = useOfficeStore((s) => s.connectionError);
   const isHistoryLoading = useChatDockStore((s) => s.isHistoryLoading);
   const setDockExpanded = useChatDockStore((s) => s.setDockExpanded);
   const sendMessage = useChatDockStore((s) => s.sendMessage);
@@ -69,7 +60,6 @@ export function ChatDialog() {
   const dragStartHeight = useRef(0);
   const prevExpanded = useRef(false);
 
-  const streamingText = extractStreamingText(streamingMessage);
   const canSend = (draft.trim().length > 0 || attachments.length > 0) && !isStreaming;
 
   // Slide animation on expand/collapse
@@ -249,6 +239,34 @@ export function ChatDialog() {
         </button>
       </div>
 
+      {/* Connection status */}
+      {(connectionStatus === "disconnected" ||
+        connectionStatus === "reconnecting" ||
+        connectionStatus === "error") && (
+        <div
+          className={`flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 text-xs ${
+            connectionStatus === "reconnecting"
+              ? "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100"
+              : "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+          }`}
+        >
+          <span className="min-w-0 flex-1">
+            {connectionStatus === "reconnecting"
+              ? t("connection.reconnecting")
+              : connectionStatus === "error"
+                ? connectionError ?? t("connection.failed")
+                : t("connection.disconnected")}
+          </span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="shrink-0 rounded-md border border-current/20 px-2 py-0.5 font-medium hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            {t("connection.retry")}
+          </button>
+        </div>
+      )}
+
       {/* Loading state */}
       {isHistoryLoading && (
         <div className="flex shrink-0 items-center justify-center gap-2 py-3 text-sm text-gray-400">
@@ -263,7 +281,7 @@ export function ChatDialog() {
         onScroll={handleScroll}
         className="relative min-h-0 flex-1 overflow-y-auto px-4 py-2"
       >
-        {allMessages.length === 0 && !isStreaming && !isHistoryLoading ? (
+        {allMessages.length === 0 && !isStreaming && !thinkingText && !isHistoryLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-gray-400">
             {t("dock.startNewChat")}
           </div>
@@ -272,7 +290,7 @@ export function ChatDialog() {
             {allMessages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
-            {isStreaming && streamingText && (
+            {isStreaming && (streamingText || thinkingText) && (
               <MessageBubble
                 message={{
                   id: "__streaming__",
@@ -281,10 +299,11 @@ export function ChatDialog() {
                   timestamp: Date.now(),
                   isStreaming: true,
                   authorAgentId: targetAgentId,
+                  thinking: thinkingText || undefined,
                 }}
               />
             )}
-            {isStreaming && !streamingText && (
+            {isStreaming && !streamingText && !thinkingText && (
               <div className="mb-3 flex justify-start">
                 <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-400 dark:bg-gray-800">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />

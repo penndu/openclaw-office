@@ -1,4 +1,16 @@
 {
+  "thinking": {
+    "title": "思考过程",
+    "expand": "展开思考",
+    "collapse": "收起思考"
+  },
+  "connection": {
+    "disconnected": "连接已断开，正在重连...",
+    "reconnecting": "正在重连...",
+    "failed": "无法连接到 Gateway",
+    "reconnect": "重新连接",
+    "retry": "重新连接"
+  },
   "dock": {
     "collapseDock": "收起对话",
     "expandDock": "展开对话",

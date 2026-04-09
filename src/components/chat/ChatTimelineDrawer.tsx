@@ -1,27 +1,16 @@
 import { ArrowDown } from "lucide-react";
 import { useRef, useEffect, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useChatStreamingText } from "@/hooks/useChatStreamingText";
 import { useChatDockStore, type ChatDockMessage } from "@/store/console-stores/chat-dock-store";
-import { MarkdownContent } from "./MarkdownContent";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingIndicator } from "./StreamingIndicator";
+import { StreamingMarkdownContent } from "./StreamingMarkdownContent";
+import { ThinkingBlock } from "./ThinkingBlock";
 
 interface ChatTimelineDrawerProps {
   height: number;
   onHeightChange: (height: number) => void;
-}
-
-function extractStreamingText(streamingMessage: Record<string, unknown> | null): string {
-  if (!streamingMessage) return "";
-  const content = streamingMessage.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return (content as Array<{ type?: string; text?: string }>)
-      .filter((b) => b.type === "text" && b.text)
-      .map((b) => b.text!)
-      .join("\n");
-  }
-  return "";
 }
 
 export function ChatTimelineDrawer({ height, onHeightChange }: ChatTimelineDrawerProps) {
@@ -29,15 +18,13 @@ export function ChatTimelineDrawer({ height, onHeightChange }: ChatTimelineDrawe
   const dockExpanded = useChatDockStore((s) => s.dockExpanded);
   const messages = useChatDockStore((s) => s.messages);
   const isStreaming = useChatDockStore((s) => s.isStreaming);
-  const streamingMessage = useChatDockStore((s) => s.streamingMessage);
+  const { streamingText, thinkingText } = useChatStreamingText();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
-
-  const streamingText = extractStreamingText(streamingMessage);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -117,7 +104,7 @@ export function ChatTimelineDrawer({ height, onHeightChange }: ChatTimelineDrawe
 
       {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-2">
-        {allMessages.length === 0 && !isStreaming ? (
+        {allMessages.length === 0 && !isStreaming && !thinkingText ? (
           <div className="flex h-full items-center justify-center text-sm text-gray-400">
             {t("dock.startNewChat")}
           </div>
@@ -126,15 +113,16 @@ export function ChatTimelineDrawer({ height, onHeightChange }: ChatTimelineDrawe
             {allMessages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
-            {isStreaming && streamingText && (
+            {isStreaming && (streamingText || thinkingText) && (
               <div className="mb-3 flex justify-start">
                 <div className="max-w-[80%] rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-                  <MarkdownContent content={streamingText} />
+                  {thinkingText ? <ThinkingBlock thinking={thinkingText} isStreaming /> : null}
+                  <StreamingMarkdownContent content={streamingText} isStreaming />
                   <StreamingIndicator />
                 </div>
               </div>
             )}
-            {isStreaming && !streamingText && (
+            {isStreaming && !streamingText && !thinkingText && (
               <div className="mb-3 flex justify-start">
                 <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-400 dark:bg-gray-800">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
