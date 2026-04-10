@@ -179,7 +179,11 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
       const providers = models?.providers as Record<string, Record<string, unknown>> | undefined;
 
       // Build a set of provider IDs that have usable credentials.
-      // A provider is usable if it doesn't require an API key, or it does but has one configured.
+      // A provider is considered usable if:
+      //   1. It doesn't require an API key (e.g. ollama, bedrock, openai-codex), OR
+      //   2. It has a configured apiKey or auth token, OR
+      //   3. It has a models list defined in config (user explicitly set it up, credentials may
+      //      be supplied via env vars or other means outside openclaw.json)
       const usableProviderIds = new Set<string>();
       if (providers) {
         for (const [providerId, provConfig] of Object.entries(providers)) {
@@ -195,33 +199,51 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
             const hasKey =
               provConfig.apiKey === REDACTED_SENTINEL ||
               (typeof provConfig.apiKey === "string" && provConfig.apiKey.length > 0);
-            if (hasAuth || hasKey) {
+            const hasModelsDefined = Array.isArray(provConfig.models) && (provConfig.models as unknown[]).length > 0;
+            if (hasAuth || hasKey || hasModelsDefined) {
               usableProviderIds.add(providerId);
             }
           }
         }
       }
-      // Catalog-only providers that don't require an API key are always usable
+      // Catalog-only providers that don't require an API key are always usable.
+      // Also include any provider that appears in the catalog — if the gateway returns it,
+      // it means OpenClaw considers it ready to use.
       for (const m of catalogModels) {
-        const meta = inferProviderType(m.provider);
-        if (!meta.requiresApiKey) {
-          usableProviderIds.add(m.provider);
+        usableProviderIds.add(m.provider);
+      }
+
+      // Collect all model IDs referenced in agent configs so we can include their providers
+      // even if they are not in the providers config block (e.g. built-in catalog providers).
+      const referencedProviders = new Set<string>();
+      const agentsListRaw = (config?.agents as Record<string, unknown> | undefined)?.list as
+        | Array<Record<string, unknown>>
+        | undefined;
+      if (agentsListRaw) {
+        const extractProvider = (modelStr: string) => {
+          const slash = modelStr.indexOf("/");
+          if (slash > 0) referencedProviders.add(modelStr.slice(0, slash));
+        };
+        for (const entry of agentsListRaw) {
+          const model = entry.model;
+          if (typeof model === "string") {
+            extractProvider(model);
+          } else if (model && typeof model === "object" && !Array.isArray(model)) {
+            const m = model as { primary?: string; fallbacks?: string[] };
+            if (m.primary) extractProvider(m.primary);
+            for (const fb of m.fallbacks ?? []) extractProvider(fb);
+          }
         }
+      }
+      // Any provider that is already referenced in agent configs should appear in the list
+      for (const pid of referencedProviders) {
+        usableProviderIds.add(pid);
       }
 
       const seen = new Set<string>();
       const options: SystemModelOption[] = [];
 
-      // Add catalog models — only for providers that have usable credentials
-      for (const m of catalogModels) {
-        if (!usableProviderIds.has(m.provider)) continue;
-        const key = `${m.provider}/${m.id}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        options.push({ id: key, label: m.name ?? m.id, provider: m.provider });
-      }
-
-      // Add config-defined models — only for providers that have usable credentials
+      // Add config-defined models first — these are the models explicitly configured by the user
       if (providers) {
         for (const [providerId, provConfig] of Object.entries(providers)) {
           if (!usableProviderIds.has(providerId)) continue;
@@ -234,6 +256,15 @@ export const useAgentsStore = create<AgentsStoreState>((set, get) => ({
             options.push({ id: key, label: m.name ?? m.id, provider: providerId });
           }
         }
+      }
+
+      // Add catalog models — these supplement config-defined models
+      for (const m of catalogModels) {
+        if (!usableProviderIds.has(m.provider)) continue;
+        const key = `${m.provider}/${m.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        options.push({ id: key, label: m.name ?? m.id, provider: m.provider });
       }
 
       const agentModelConfigs: Record<string, { primary: string; fallbacks: string[] }> = {};
