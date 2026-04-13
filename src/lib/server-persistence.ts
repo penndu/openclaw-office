@@ -13,6 +13,15 @@ interface ServerCacheSessionsResponse {
   cachedAt: number | null;
 }
 
+interface ServerCacheAllMessagesItem {
+  sessionKey: string;
+  messageCount?: number;
+}
+
+interface ServerCacheAllMessagesResponse {
+  sessions: ServerCacheAllMessagesItem[];
+}
+
 const BASE_URL = "/api/chat-cache";
 const SAVE_DEBOUNCE_MS = 2000;
 
@@ -94,6 +103,26 @@ export const serverPersistence = {
       return await fetchJson<ServerCacheSessionsResponse>(`${BASE_URL}/sessions`);
     } catch {
       return { sessions: [], cachedAt: null };
+    }
+  },
+
+  async getAllMessageCounts(): Promise<Map<string, number>> {
+    try {
+      const result = await fetchJson<ServerCacheAllMessagesResponse>(`${BASE_URL}/all-messages`);
+      const counts = new Map<string, number>();
+      for (const item of result.sessions ?? []) {
+        if (typeof item.sessionKey !== "string" || item.sessionKey.length === 0) {
+          continue;
+        }
+        const rawCount = item.messageCount;
+        if (typeof rawCount !== "number" || !Number.isFinite(rawCount) || rawCount < 0) {
+          continue;
+        }
+        counts.set(item.sessionKey, rawCount);
+      }
+      return counts;
+    } catch {
+      return new Map<string, number>();
     }
   },
 

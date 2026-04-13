@@ -750,6 +750,35 @@ function normalizeSession(session: SessionInfo): SessionInfo {
   };
 }
 
+function applyMessageCountHints(
+  sessions: SessionInfo[],
+  messageCountHints: Map<string, number>,
+): SessionInfo[] {
+  if (messageCountHints.size === 0) {
+    return sessions;
+  }
+
+  return sessions.map((session) => {
+    const hinted = messageCountHints.get(session.key);
+    if (typeof hinted !== "number" || !Number.isFinite(hinted) || hinted < 0) {
+      return session;
+    }
+
+    const current =
+      typeof session.messageCount === "number" && Number.isFinite(session.messageCount) && session.messageCount >= 0
+        ? session.messageCount
+        : 0;
+    if (hinted <= current) {
+      return session;
+    }
+
+    return {
+      ...session,
+      messageCount: hinted,
+    };
+  });
+}
+
 function buildSystemMessage(content: string, kind: ChatMessageKind = "command"): ChatDockMessage {
   return {
     id: generateMessageId(),
@@ -1255,13 +1284,17 @@ export const useChatDockStore = create<ChatDockState>((set, get) => {
 
   loadSessions: async () => {
     const current = get();
+    const messageCountHints = await serverPersistence.getAllMessageCounts();
 
     // Layer 1: Server file cache (fast, persistent)
     const serverCached = await serverPersistence.getSessions();
     if (serverCached.sessions.length > 0) {
       const normalizedServer = filterWorkspaceSessions(serverCached.sessions.map(normalizeSession));
       set({
-        sessions: mergeCurrentSession(normalizedServer, current.currentSessionKey, current.targetAgentId),
+        sessions: applyMessageCountHints(
+          mergeCurrentSession(normalizedServer, current.currentSessionKey, current.targetAgentId),
+          messageCountHints,
+        ),
       });
     } else {
       // Layer 2: IndexedDB fallback
@@ -1269,7 +1302,10 @@ export const useChatDockStore = create<ChatDockState>((set, get) => {
       if (idbCached.sessions.length > 0) {
         const normalizedIdb = filterWorkspaceSessions(idbCached.sessions.map(normalizeSession));
         set({
-          sessions: mergeCurrentSession(normalizedIdb, current.currentSessionKey, current.targetAgentId),
+          sessions: applyMessageCountHints(
+            mergeCurrentSession(normalizedIdb, current.currentSessionKey, current.targetAgentId),
+            messageCountHints,
+          ),
         });
       }
     }
@@ -1278,7 +1314,10 @@ export const useChatDockStore = create<ChatDockState>((set, get) => {
     try {
       const result = await withAdapter((adapter) => adapter.sessionsList());
       const normalized = filterWorkspaceSessions(result.map(normalizeSession));
-      const merged = mergeCurrentSession(normalized, get().currentSessionKey, get().targetAgentId);
+      const merged = applyMessageCountHints(
+        mergeCurrentSession(normalized, get().currentSessionKey, get().targetAgentId),
+        messageCountHints,
+      );
       set({ sessions: merged });
       persistSessions(merged);
     } catch {

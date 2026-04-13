@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { __resetAdapterForTests, getAdapter, initAdapter } from "@/gateway/adapter-provider";
 import { localPersistence } from "@/lib/local-persistence";
+import { serverPersistence } from "@/lib/server-persistence";
 import { useChatDockStore, createEmptySessionRuntime } from "../console-stores/chat-dock-store";
 
 function resetChatStore() {
@@ -35,6 +36,7 @@ describe("Chat workspace store", () => {
     __resetAdapterForTests();
     await initAdapter("mock");
     vi.restoreAllMocks();
+    vi.spyOn(serverPersistence, "getAllMessageCounts").mockResolvedValue(new Map());
     resetChatStore();
   });
 
@@ -153,6 +155,27 @@ describe("Chat workspace store", () => {
     expect(sessionsListSpy).toHaveBeenCalled();
     const sessions = useChatDockStore.getState().sessions;
     expect(sessions.length).toBeGreaterThan(0);
+  });
+
+  it("uses chat-cache metadata count when gateway session count is stale", async () => {
+    vi.spyOn(serverPersistence, "getAllMessageCounts").mockResolvedValue(
+      new Map([["agent:main:session-1", 12]]),
+    );
+    vi.spyOn(getAdapter(), "sessionsList").mockResolvedValue([
+      {
+        key: "agent:main:session-1",
+        agentId: "main",
+        label: "session-1",
+        createdAt: 1,
+        lastActiveAt: 2,
+        messageCount: 0,
+      },
+    ]);
+
+    await useChatDockStore.getState().loadSessions();
+
+    const session = useChatDockStore.getState().sessions.find((item) => item.key === "agent:main:session-1");
+    expect(session?.messageCount).toBe(12);
   });
 
   it("shows cached messages immediately then refreshes from gateway", async () => {
